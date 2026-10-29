@@ -92,6 +92,22 @@ def _sample_core(kind: str, signed_on: dt.date) -> str:
         return (f"EMPLOYMENT CONTRACT made on {when}.\nThe Employee shall receive a gross monthly salary of RM2,800.00.")
     if kind == "transfer":
         return f"MEMORANDUM OF TRANSFER dated {when}.\nThe consideration for the transfer is RM500,000.00."
+    owner = "\nContract owner: Aisha Rahman."
+    if kind == "service":
+        return (f"SERVICE AGREEMENT dated {when} between Demo Alpha Sdn Bhd and Demo Beta Sdn Bhd.\n"
+                f"Contract sum RM120,000.00 for a fixed term of 24 months.{owner}")
+    if kind == "shareholders":
+        return (f"SHAREHOLDERS AGREEMENT made on {when} between Demo Alpha Sdn Bhd and Demo Beta Sdn Bhd "
+                f"governing their holdings in Demo Gamma Sdn Bhd.{owner}")
+    if kind == "intercompany":
+        return (f"INTERCOMPANY AGREEMENT dated {when} between Demo Alpha Sdn Bhd and Demo Beta Sdn Bhd "
+                f"for shared services.{owner}")
+    if kind == "shares":
+        return (f"SHARE TRANSFER FORM dated {when}.\nThe consideration is RM250,000.00. "
+                f"Net tangible assets of the shares transferred: RM300,000.00.{owner}")
+    if kind == "loanu":
+        return (f"UNSECURED LOAN AGREEMENT dated {when}.\nPrincipal sum RM200,000.00 repayable over a "
+                f"fixed term of 24 months.{owner}")
     raise ValueError(kind)
 
 
@@ -221,7 +237,23 @@ class HeuristicClassifier:
         date = _find_date(text)
         item: str | None = None
         fin: dict[str, Any] = {}
-        if "tenancy" in low or "lease" in low:
+        kind: str | None = None
+        if "share transfer" in low:
+            item, kind = "ITEM_32_SHARES", "SHARE_TRANSFER"
+            fin = {"consideration_or_loan_rm": _money(text, r"consideration[^\n]*?" + _RM),
+                   "net_tangible_assets_rm": _money(text, r"net tangible assets[^\n]*?" + _RM)}
+        elif "shareholders agreement" in low or "intercompany" in low:
+            item = "ITEM_4_GENERAL"
+            kind = "SHAREHOLDER" if "shareholders" in low else "INTERCOMPANY"
+        elif "service agreement" in low:
+            item, kind = "ITEM_22_AGREEMENT", "SERVICE"
+            fin = {"consideration_or_loan_rm": _money(text, r"contract sum\s+" + _RM),
+                   "fixed_tenure": "fixed term" in low}
+        elif "unsecured loan" in low:
+            item, kind = "ITEM_22_AGREEMENT", "LOAN"
+            fin = {"consideration_or_loan_rm": _money(text, r"principal(?:\s+sum)?\s+" + _RM),
+                   "fixed_tenure": "fixed term" in low}
+        elif "tenancy" in low or "lease" in low:
             item = "ITEM_49_LEASE"
             months = re.search(r"(\d+)\s*months", low)
             fin = {"monthly_rental_rm": _money(text, r"rent\s+of\s+" + _RM) or _money(text, r"rent\s+" + _RM),
@@ -236,14 +268,20 @@ class HeuristicClassifier:
         elif "transfer" in low:
             item = "ITEM_32A_MOT"
             fin = {"consideration_or_loan_rm": _money(text, r"consideration[^\n]*?" + _RM)}
+        owner = re.search(r"contract owner:\s*([^\n.]+)", text, re.IGNORECASE)
+        kind = kind or {"ITEM_49_LEASE": "TENANCY", "ITEM_22_SECURITY": "SECURITY", "ITEM_4_EMPLOYMENT": "EMPLOYMENT",
+                        "ITEM_32A_MOT": "SHARE_TRANSFER"}.get(item or "")
         if item is None or date is None:
             raise GateFailure("CLASSIFIER_SCHEMA", "Demo classifier could not recognise this document")
         module = {"ITEM_49_LEASE": "SEWA_PAJAKAN", "ITEM_22_SECURITY": "SEKURITI",
-                  "ITEM_4_EMPLOYMENT": "PENYETEMAN_AM", "ITEM_32A_MOT": "PINDAH_MILIK_HARTANAH"}[item]
+                  "ITEM_4_EMPLOYMENT": "PENYETEMAN_AM", "ITEM_32A_MOT": "PINDAH_MILIK_HARTANAH",
+                  "ITEM_4_GENERAL": "PERJANJIAN_AM", "ITEM_22_AGREEMENT": "PERJANJIAN_PINJAMAN",
+                  "ITEM_32_SHARES": "PEMINDAHAN_SAHAM"}[item]
         return Classification.model_validate({
             "bnds_module": module, "first_schedule_item": item, "requires_jpph_valuation": False,
             "is_foreign_buyer_or_entity": False, "financials": {k: v for k, v in fin.items() if v is not None},
             "parties": [p.model_dump() for p in DEMO_PARTIES], "execution_date": date,
+            "document_kind": kind, "contract_owner": owner.group(1).strip() if owner else None,
             "confidence": 0.72 if "illegible" in low else 0.99,
         })
 
@@ -274,6 +312,14 @@ def portal_total(module: str, f: dict[str, str]) -> Decimal:
         months = int(f["lease_months"])
         rate = 1 if months <= 12 else 3 if months <= 36 else 5 if months <= 60 else 7
         return Decimal(max(_ceil(Fraction(Decimal(f["monthly_rent"])) * 12 / 250) * rate, 10) + dup * 10)
+    if module == "PERJANJIAN_AM":
+        return Decimal(10 + dup * 10)
+    if module == "PERJANJIAN_PINJAMAN":
+        rate = 5 if f.get("fixed_tenure") == "Y" else 10
+        return Decimal(max(_ceil(Fraction(Decimal(f["principal_or_consideration"])) / 1000) * rate, 10) + dup * 10)
+    if module == "PEMINDAHAN_SAHAM":
+        value = max(Decimal(f["principal_or_consideration"]), Decimal(f["net_tangible_assets"]))
+        return Decimal(max(_ceil(Fraction(value) / 1000) * 3, 10) + dup * 10)
     if module == "SEKURITI":
         return Decimal(max(_ceil(Fraction(Decimal(f["principal_or_consideration"])) / 1000) * 5, 10) + dup * 10)
     value = max(Decimal(f["principal_or_consideration"]), Decimal(f.get("market_value", "0")))
@@ -449,7 +495,9 @@ def build_demo(
 ) -> tuple[Pipeline, Settings, SimulatedPortal, NullNotifier]:
     rules_path = Path(__file__).resolve().parents[2] / "rules" / "stamp_rules.json"
     rules, sha = load_rules(rules_path)
-    rules = rules.model_copy(update={"signoff": Signoff(by="DEMO ONLY", role="demo", date=dt.date.today())})
+    live = {**rules.phase_start, **{k: dt.date(2026, 1, 1) for k in ("ITEM_4_GENERAL", "ITEM_22_AGREEMENT", "ITEM_32_SHARES")}}
+    rules = rules.model_copy(update={"signoff": Signoff(by="DEMO ONLY", role="demo", date=dt.date.today()),
+                                     "phase_start": live})  # demo only: the new items are NOT live in the real rules file
     base: dict[str, Any] = dict(
         mode="live", engine_token=engine_token or secrets.token_hex(32),
         webhook_secret=webhook_secret or secrets.token_hex(32), rules_path=str(rules_path),

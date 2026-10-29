@@ -24,6 +24,24 @@ class Item(str, Enum):
     ITEM_49_LEASE = "ITEM_49_LEASE"
     ITEM_22_SECURITY = "ITEM_22_SECURITY"
     ITEM_32A_MOT = "ITEM_32A_MOT"
+    ITEM_4_GENERAL = "ITEM_4_GENERAL"  # nominal-duty agreements (shareholder, intercompany, commercial)
+    ITEM_22_AGREEMENT = "ITEM_22_AGREEMENT"  # loan and service agreements with an ascertainable sum
+    ITEM_32_SHARES = "ITEM_32_SHARES"  # transfer of shares
+
+
+class DocKind(str, Enum):
+    """The document types TMF manages. Used by the contract register; the duty comes from the item."""
+
+    EMPLOYMENT = "EMPLOYMENT"
+    SERVICE = "SERVICE"
+    INTERCOMPANY = "INTERCOMPANY"
+    LOAN = "LOAN"
+    SHAREHOLDER = "SHAREHOLDER"
+    SHARE_TRANSFER = "SHARE_TRANSFER"
+    TENANCY = "TENANCY"
+    SECURITY = "SECURITY"
+    COMMERCIAL = "COMMERCIAL"
+    OTHER = "OTHER"
 
 
 class Module(str, Enum):
@@ -31,6 +49,10 @@ class Module(str, Enum):
     SEWA_PAJAKAN = "SEWA_PAJAKAN"
     SEKURITI = "SEKURITI"
     PINDAH_MILIK_HARTANAH = "PINDAH_MILIK_HARTANAH"
+    # Placeholder names for the three modules below: calibrate against the real BNDS screens.
+    PERJANJIAN_AM = "PERJANJIAN_AM"
+    PERJANJIAN_PINJAMAN = "PERJANJIAN_PINJAMAN"
+    PEMINDAHAN_SAHAM = "PEMINDAHAN_SAHAM"
 
 
 MODULE_FOR_ITEM: dict[Item, Module] = {
@@ -38,6 +60,9 @@ MODULE_FOR_ITEM: dict[Item, Module] = {
     Item.ITEM_49_LEASE: Module.SEWA_PAJAKAN,
     Item.ITEM_22_SECURITY: Module.SEKURITI,
     Item.ITEM_32A_MOT: Module.PINDAH_MILIK_HARTANAH,
+    Item.ITEM_4_GENERAL: Module.PERJANJIAN_AM,
+    Item.ITEM_22_AGREEMENT: Module.PERJANJIAN_PINJAMAN,
+    Item.ITEM_32_SHARES: Module.PEMINDAHAN_SAHAM,
 }
 
 
@@ -65,6 +90,8 @@ class Financials(Strict):
     market_value_rm: Money | None = None
     security_kind: SecurityKind | None = None
     duplicate_copies: int = Field(default=0, ge=0, le=1000)
+    fixed_tenure: bool | None = None  # loan or service agreement: does it state a fixed term?
+    net_tangible_assets_rm: Money | None = None  # share transfers: NTA of the shares transferred
 
 
 class Party(Strict):
@@ -86,6 +113,9 @@ class Classification(Strict):
     financials: Financials
     parties: list[Party] = Field(min_length=1, max_length=20)
     execution_date: dt.date
+    document_kind: DocKind | None = None
+    contract_owner: str | None = Field(default=None, max_length=200)
+    expiry_date: dt.date | None = None
     confidence: float = Field(ge=0.0, le=1.0)
     evidence: list[str] = Field(default_factory=list, max_length=40)
 

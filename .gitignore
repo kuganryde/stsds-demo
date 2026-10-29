@@ -6,3 +6,4 @@ demo-samples/
 .venv/
 .env
 *.whl
+.coverage

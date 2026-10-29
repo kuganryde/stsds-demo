@@ -25,6 +25,13 @@
       <p id="status" role="status" aria-live="polite"></p>
     </section>
 
+    <div class="tabs" role="group" aria-label="Sections">
+      <button type="button" class="tab" data-tab="work" aria-pressed="true">Work queue</button>
+      <button type="button" class="tab" data-tab="dashboard" aria-pressed="false">Dashboard</button>
+      <button type="button" class="tab" data-tab="register" aria-pressed="false">Contract register</button>
+    </div>
+
+    <div id="tab-work">
     <section aria-labelledby="batch-h" class="card">
       <h2 id="batch-h">Submit documents</h2>
       <p class="hint">Choose several PDFs. Each is validated and scored on its own: high-confidence documents are processed automatically, the rest appear in the queue below.</p>
@@ -79,6 +86,61 @@
         <div class="row"><button id="approve-filing" type="button">Approve this filing</button></div>
       </fieldset>
     </section>
+    </div>
+
+    <div id="tab-dashboard" hidden>
+      <section class="card" aria-labelledby="dash-h">
+        <h2 id="dash-h">Compliance dashboard</h2>
+        <p class="hint">Live from the contract register. Penalty figures are estimates for planning only; nothing here files or pays.</p>
+        <div id="tiles" class="tiles"></div>
+        <div class="row"><button id="dash-refresh" type="button" class="secondary">Refresh</button>
+          <label for="rep-month" class="sr">Report month</label><input id="rep-month" type="text" placeholder="YYYY-MM" maxlength="7" size="9">
+          <button id="rep-run" type="button" class="secondary">Monthly review</button></div>
+        <p id="rep-out" class="hint"></p>
+      </section>
+      <section class="card" aria-labelledby="alerts-h">
+        <h2 id="alerts-h">Alerts</h2>
+        <div class="table-wrap"><table><caption class="sr">Compliance alerts, most urgent first</caption>
+          <thead><tr><th scope="col">Level</th><th scope="col">Contract</th><th scope="col">Entity</th><th scope="col">Date</th><th scope="col">Detail</th></tr></thead>
+          <tbody id="alerts"></tbody></table></div>
+      </section>
+    </div>
+
+    <div id="tab-register" hidden>
+      <section class="card" aria-labelledby="reg-h">
+        <h2 id="reg-h">Contract register</h2>
+        <div class="row">
+          <label for="reg-q" class="sr">Search</label><input id="reg-q" type="text" placeholder="Search name, entity, owner" maxlength="100">
+          <label for="reg-status" class="sr">Status</label>
+          <select id="reg-status"><option value="">All statuses</option><option>STAMPED</option><option>IN_PROGRESS</option><option>UNSTAMPED</option><option>OVERDUE</option><option>NOT_REQUIRED</option></select>
+          <button id="reg-go" type="button">Search</button>
+          <button id="reg-csv" type="button" class="secondary">Export CSV</button>
+        </div>
+        <div class="table-wrap"><table><caption class="sr">Contracts and their stamping status</caption>
+          <thead><tr><th scope="col">Contract</th><th scope="col">Entity</th><th scope="col">Type</th><th scope="col">Owner</th><th scope="col">Executed</th><th scope="col">Duty (RM)</th><th scope="col">Status</th><th scope="col">Deadline</th><th scope="col">Expiry</th><th scope="col">Penalty est. (RM)</th></tr></thead>
+          <tbody id="register"></tbody></table></div>
+      </section>
+      <section class="card" aria-labelledby="add-h">
+        <h2 id="add-h">Add an existing contract</h2>
+        <p class="hint">For contracts stamped or still to be stamped outside this app. Dates are YYYY-MM-DD.</p>
+        <div class="row">
+          <label for="a-name" class="sr">Contract name</label><input id="a-name" type="text" placeholder="Contract name" maxlength="200">
+          <label for="a-entity" class="sr">Entity</label><input id="a-entity" type="text" placeholder="Entity" maxlength="200">
+          <label for="a-kind" class="sr">Type</label>
+          <select id="a-kind"><option>EMPLOYMENT</option><option>SERVICE</option><option>INTERCOMPANY</option><option>LOAN</option><option>SHAREHOLDER</option><option>SHARE_TRANSFER</option><option>TENANCY</option><option>SECURITY</option><option>COMMERCIAL</option><option>OTHER</option></select>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <label for="a-exec" class="sr">Execution date</label><input id="a-exec" type="text" placeholder="Executed (YYYY-MM-DD)" maxlength="10">
+          <label for="a-duty" class="sr">Duty paid</label><input id="a-duty" type="text" placeholder="Duty RM (if known)" maxlength="16">
+          <label for="a-owner" class="sr">Contract owner</label><input id="a-owner" type="text" placeholder="Contract owner" maxlength="200">
+          <label for="a-expiry" class="sr">Expiry date</label><input id="a-expiry" type="text" placeholder="Expiry (YYYY-MM-DD)" maxlength="10">
+          <label for="a-cert" class="sr">Certificate reference</label><input id="a-cert" type="text" placeholder="Certificate ref (if stamped)" maxlength="120">
+          <button id="a-add" type="button">Add to register</button>
+        </div>
+        <div class="row" style="margin-top:12px"><label for="a-file">Or import a CSV</label><input id="a-file" type="file" accept=".csv,text/csv"><button id="a-import" type="button" class="secondary">Import</button></div>
+        <p class="hint">CSV columns: name, entity, doc_kind, execution_date, and optionally counterparty, duty_rm, contract_owner, certificate_ref, stamped_on, renewal_date, expiry_date, not_required, notes.</p>
+      </section>
+    </div>
   </main>
   <script src="/console/app.js"></script>
 </body>

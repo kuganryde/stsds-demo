@@ -16,7 +16,7 @@ from decimal import Decimal
 from .rules import Rules
 from .schemas import CalcResult, Classification, Item, SecurityKind, Step
 
-ENGINE_VERSION = "1.0.0"
+ENGINE_VERSION = "1.1.0"
 _SEN = 100
 
 
@@ -193,11 +193,69 @@ def _item_32(c: Classification, r: Rules, steps: list[Step]) -> tuple[int, bool]
     return max(gross, floor), False
 
 
+def _item_4_general(c: Classification, r: Rules, steps: list[Step]) -> tuple[int, bool]:
+    duty = _sen(r.item_4_general.duty, "item_4_general.duty") // _SEN
+    steps.append(Step(label="Item 4 agreement: nominal duty", formula=f"fixed RM{duty}", amount_rm=_rm(duty)))
+    return duty, False
+
+
+def _item_22_agreement(c: Classification, r: Rules, steps: list[Step]) -> tuple[int, bool]:
+    f = c.financials
+    _need(f.consideration_or_loan_rm, "MISSING_PRINCIPAL", "Loan or contract sum not found")
+    _need(f.fixed_tenure, "MISSING_TENURE", "Not stated whether the term is fixed")
+    assert f.consideration_or_loan_rm is not None
+    rate = r.item_22_agreement.fixed_tenure_rate if f.fixed_tenure else r.item_22_agreement.no_tenure_rate
+    units = _units(_sen(f.consideration_or_loan_rm, "principal"), r.item_22_agreement.unit_rm)
+    gross = units * rate
+    floor = _sen(r.min_duty, "min_duty") // _SEN
+    steps.append(
+        Step(
+            label="Item 22 loan or service agreement: ad valorem",
+            formula=(
+                f"ceil({f.consideration_or_loan_rm} / {r.item_22_agreement.unit_rm}) = {units} units "
+                f"x RM{rate} ({'fixed' if f.fixed_tenure else 'no fixed'} tenure) = {gross}"
+            ),
+            amount_rm=_rm(gross),
+        )
+    )
+    if gross < floor:
+        steps.append(
+            Step(label="Section 36CB minimum duty", formula=f"max({gross}, {floor})", amount_rm=_rm(floor))
+        )
+    return max(gross, floor), False
+
+
+def _item_32_shares(c: Classification, r: Rules, steps: list[Step]) -> tuple[int, bool]:
+    f = c.financials
+    _need(f.consideration_or_loan_rm, "MISSING_VALUE", "Consideration not found")
+    _need(f.net_tangible_assets_rm, "MISSING_NTA", "Net tangible assets not found; cannot tell which is higher")
+    assert f.consideration_or_loan_rm is not None and f.net_tangible_assets_rm is not None
+    value = max(f.consideration_or_loan_rm, f.net_tangible_assets_rm)  # the higher of the two is dutiable
+    units = _units(_sen(value, "dutiable_value"), r.item_32_shares.unit_rm)
+    gross = units * r.item_32_shares.rate
+    floor = _sen(r.min_duty, "min_duty") // _SEN
+    steps.append(
+        Step(
+            label="Item 32 share transfer: ad valorem on the higher of consideration and NTA",
+            formula=f"ceil({value} / {r.item_32_shares.unit_rm}) = {units} units x RM{r.item_32_shares.rate} = {gross}",
+            amount_rm=_rm(gross),
+        )
+    )
+    if gross < floor:
+        steps.append(
+            Step(label="Section 36CB minimum duty", formula=f"max({gross}, {floor})", amount_rm=_rm(floor))
+        )
+    return max(gross, floor), False
+
+
 _HANDLERS = {
     Item.ITEM_4_EMPLOYMENT: _item_4,
     Item.ITEM_49_LEASE: _item_49,
     Item.ITEM_22_SECURITY: _item_22,
     Item.ITEM_32A_MOT: _item_32,
+    Item.ITEM_4_GENERAL: _item_4_general,
+    Item.ITEM_22_AGREEMENT: _item_22_agreement,
+    Item.ITEM_32_SHARES: _item_32_shares,
 }
 
 

@@ -19,7 +19,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any, Literal
 
-from fastapi import BackgroundTasks, Body, Depends, FastAPI, Header, HTTPException, Request
+from fastapi import BackgroundTasks, Body, Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.responses import JSONResponse, PlainTextResponse, Response
 from pydantic import BaseModel, ValidationError
 
@@ -30,6 +30,13 @@ from .gates import GateFailure
 from .ledger import Ledger, csv_safe
 from .orchestrator import Orchestrator
 from .pipeline import Pipeline, StageResult
+from .register import MAX_IMPORT_BYTES, ManualIn, OverrideIn, Register
+from .register import Entry as RegEntry
+from .register import alerts as monitoring_alerts_fn
+from .register import monthly_report as monthly_report_fn
+from .register import summary as monitoring_summary_fn
+from .register import to_csv as register_to_csv
+from .register import unstamped as unstamped_fn
 from .schemas import Classification
 from .security import AuthError, valid_txn_id, verify_bearer, verify_webhook
 from .settings import Settings
@@ -101,6 +108,7 @@ CONSOLE_CSP = (
 def create_app(
     pipeline: Pipeline, settings: Settings, users: UserDirectory | None = None,
     signer: SignatureProvider | None = None,
+    register: Register | None = None,
 ) -> FastAPI:
     app = FastAPI(title="STSDS Engine", version=__version__, docs_url=None, redoc_url=None, openapi_url=None)
     orchestrator = Orchestrator(pipeline)
@@ -433,6 +441,85 @@ def create_app(
                 raise HTTPException(422, "invalid body") from exc
             # The body only names an envelope. Everything else is re-read from the provider.
             return await _collect(hook.envelope_id, background)
+
+    # ---- contract register and compliance monitoring --------------------------------------------
+    reg = register or Register(Path(settings.staging_dir) / "register.sqlite3", pipeline.rules.penalty)
+    reg_read = principal("operator", "reviewer", "checker")
+    reg_write = principal("operator", "checker")
+
+    def current_entries() -> list[RegEntry]:
+        ctxs = [c for c in (pipeline.store.load(i) for i in pipeline.store.list_ids()) if c is not None]
+        return reg.entries(ctxs, pipeline._today())
+
+    @app.get("/v1/register")
+    def register_list(
+        status: str | None = None, kind: str | None = None, q: str | None = Query(default=None, max_length=100),
+        _who: Identity = Depends(reg_read),
+    ) -> dict[str, Any]:
+        rows = current_entries()
+        if status:
+            rows = [e for e in rows if e.status.value == status.upper()]
+        if kind:
+            rows = [e for e in rows if e.doc_kind.value == kind.upper()]
+        if q:
+            needle = q.lower()
+            rows = [e for e in rows if needle in f"{e.name} {e.entity} {e.counterparty or ''} {e.contract_owner or ''}".lower()]
+        return {"items": [e.model_dump(mode="json") for e in rows[:1000]], "total": len(rows)}
+
+    @app.post("/v1/register")
+    def register_add(body: ManualIn, who: Identity = Depends(reg_write)) -> dict[str, str]:
+        return {"id": reg.add_manual(body, who.name)}
+
+    @app.post("/v1/register/import")
+    async def register_import(request: Request, who: Identity = Depends(reg_write)) -> dict[str, Any]:
+        raw = await request.body()
+        if len(raw) > MAX_IMPORT_BYTES:
+            raise HTTPException(413, "file too large")
+        try:
+            text = raw.decode("utf-8-sig")
+        except UnicodeDecodeError as exc:
+            raise HTTPException(400, "CSV must be UTF-8") from exc
+        result = reg.import_csv(text, who.name)
+        if result["errors"]:
+            raise HTTPException(422, result)
+        return result
+
+    @app.patch("/v1/register/{entry_id}")
+    def register_edit(entry_id: str, body: OverrideIn, who: Identity = Depends(reg_write)) -> dict[str, bool]:
+        if not reg.update(entry_id, body, who.name):
+            raise HTTPException(404, "entry not found or edit not valid")
+        return {"ok": True}
+
+    @app.get("/v1/register/{entry_id}/history")
+    def register_history(entry_id: str, _who: Identity = Depends(reg_read)) -> dict[str, Any]:
+        return {"items": reg.history(entry_id)}
+
+    @app.get("/v1/register.csv")
+    def register_csv(_who: Identity = Depends(reg_write)) -> Response:
+        return Response(register_to_csv(current_entries()), media_type="text/csv; charset=utf-8",
+                        headers={"Content-Disposition": 'attachment; filename="stsds-register.csv"'})
+
+    @app.get("/v1/monitoring/summary")
+    def monitoring_summary(_who: Identity = Depends(reg_read)) -> dict[str, Any]:
+        out: dict[str, Any] = json.loads(json.dumps(monitoring_summary_fn(current_entries(), pipeline._today()), default=str))
+        return out
+
+    @app.get("/v1/monitoring/alerts")
+    def monitoring_alerts(_who: Identity = Depends(reg_read)) -> dict[str, Any]:
+        return {"items": json.loads(json.dumps(monitoring_alerts_fn(current_entries(), pipeline._today()), default=str))}
+
+    @app.get("/v1/monitoring/unstamped")
+    def monitoring_unstamped(_who: Identity = Depends(reg_read)) -> dict[str, Any]:
+        return {"items": [e.model_dump(mode="json") for e in unstamped_fn(current_entries())]}
+
+    @app.get("/v1/reports/monthly")
+    def report_monthly(
+        month: str = Query(pattern=r"^\d{4}-(0[1-9]|1[0-2])$"), _who: Identity = Depends(reg_read)
+    ) -> dict[str, Any]:
+        rep = monthly_report_fn(current_entries(), int(month[:4]), int(month[5:]), pipeline._today())
+        shaped: dict[str, Any] = json.loads(
+            json.dumps(rep, default=lambda o: o.model_dump(mode="json") if hasattr(o, "model_dump") else str(o)))
+        return shaped
 
     # ---- reviewer console (static, same-origin, no inline script) -------------------------------
     def console_file(name: str, media: str, csp: bool = False) -> Response:

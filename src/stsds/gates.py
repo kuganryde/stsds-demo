@@ -136,6 +136,7 @@ def grounding_report(c: Classification, ocr_text: str) -> tuple[list[str], int]:
         "monthly_rental_rm": f.monthly_rental_rm,
         "consideration_or_loan_rm": f.consideration_or_loan_rm,
         "market_value_rm": f.market_value_rm,
+        "net_tangible_assets_rm": f.net_tangible_assets_rm,
     }
     missing: list[str] = []
     checked = 1  # the execution date is always checked

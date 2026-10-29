@@ -157,6 +157,132 @@
     } catch (e) { say("Upload failed: " + e.message, true); }
   }
 
+  // ---- dashboard, register ------------------------------------------------------------------
+  function showTab(name) {
+    for (const t of ["work", "dashboard", "register"]) $("tab-" + t).hidden = t !== name;
+    for (const b of document.querySelectorAll(".tab")) b.setAttribute("aria-pressed", String(b.dataset.tab === name));
+    if (!token) return;
+    if (name === "dashboard") loadDashboard().catch((e) => say(e.message, true));
+    if (name === "register") loadRegister().catch((e) => say(e.message, true));
+  }
+
+  function tile(label, value, bad) {
+    const d = document.createElement("div");
+    d.className = "tile";
+    const b = document.createElement("b");
+    b.textContent = String(value);
+    if (bad) b.className = "bad";
+    d.appendChild(b);
+    d.appendChild(document.createTextNode(label));
+    return d;
+  }
+
+  async function loadDashboard() {
+    const s = await (await api("/v1/monitoring/summary")).json();
+    const by = s.by_status || {}, al = s.alerts || {};
+    const tiles = $("tiles");
+    tiles.replaceChildren(
+      tile("Contracts in the register", s.total),
+      tile("Compliance rate", s.compliance_rate_pct == null ? "–" : s.compliance_rate_pct + "%"),
+      tile("Stamped", by.STAMPED || 0),
+      tile("In progress", by.IN_PROGRESS || 0),
+      tile("Unstamped, within 30 days", by.UNSTAMPED || 0),
+      tile("Overdue", by.OVERDUE || 0, (by.OVERDUE || 0) > 0),
+      tile("Penalty exposure (est., RM)", s.penalty_exposure_rm, Number(s.penalty_exposure_rm) > 0),
+      tile("Due within 7 days", al.DUE_SOON || 0),
+      tile("Expiring or expired", (al.EXPIRING || 0) + (al.EXPIRED || 0)),
+      tile("Duty stamped (RM)", s.duty_stamped_rm));
+    const a = await (await api("/v1/monitoring/alerts")).json();
+    const body = $("alerts");
+    body.replaceChildren();
+    if (!a.items.length) {
+      const tr = document.createElement("tr");
+      cell(tr, "No alerts.").colSpan = 5;
+      body.appendChild(tr);
+    }
+    for (const it of a.items) {
+      const tr = document.createElement("tr");
+      cell(tr, it.level, it.level === "OVERDUE" || it.level === "EXPIRED" ? "bad" : "");
+      cell(tr, it.name); cell(tr, it.entity); cell(tr, it.date); cell(tr, it.message);
+      body.appendChild(tr);
+    }
+  }
+
+  async function loadRegister() {
+    const q = new URLSearchParams();
+    if ($("reg-q").value.trim()) q.set("q", $("reg-q").value.trim());
+    if ($("reg-status").value) q.set("status", $("reg-status").value);
+    const data = await (await api("/v1/register?" + q.toString())).json();
+    const body = $("register");
+    body.replaceChildren();
+    if (!data.items.length) {
+      const tr = document.createElement("tr");
+      cell(tr, "No contracts match.").colSpan = 10;
+      body.appendChild(tr);
+    }
+    for (const e of data.items) {
+      const tr = document.createElement("tr");
+      cell(tr, e.name); cell(tr, e.entity); cell(tr, e.doc_kind); cell(tr, e.contract_owner || "–");
+      cell(tr, e.execution_date); cell(tr, e.duty_rm == null ? "–" : e.duty_rm);
+      cell(tr, e.status + (e.attention.length ? " (" + e.attention[0] + ")" : ""), e.status === "OVERDUE" ? "bad" : e.status === "STAMPED" ? "good" : "");
+      cell(tr, e.deadline); cell(tr, e.expiry_date || "–");
+      cell(tr, e.penalty ? e.penalty.amount_rm + (e.status === "STAMPED" ? " (incurred)" : "") : "–");
+      body.appendChild(tr);
+    }
+  }
+
+  function csvDownload(name, blob) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = name; a.rel = "noopener";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  async function addContract() {
+    const v = (id) => $(id).value.trim() || null;
+    const body = { name: v("a-name"), entity: v("a-entity"), doc_kind: $("a-kind").value, execution_date: v("a-exec"),
+      duty_rm: v("a-duty"), contract_owner: v("a-owner"), expiry_date: v("a-expiry"), certificate_ref: v("a-cert") };
+    for (const k of Object.keys(body)) if (body[k] === null) delete body[k];
+    try {
+      await api("/v1/register", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      for (const id of ["a-name", "a-entity", "a-exec", "a-duty", "a-owner", "a-expiry", "a-cert"]) $(id).value = "";
+      say("Added to the register.", false);
+      await loadRegister();
+    } catch (e) { say("Could not add: " + e.message, true); }
+  }
+
+  async function importCsv() {
+    const f = $("a-file").files[0];
+    if (!f) { say("Choose a CSV file first.", true); return; }
+    try {
+      const r = await (await api("/v1/register/import", { method: "POST", headers: { "Content-Type": "text/csv" }, body: await f.text() })).json();
+      say("Imported " + r.imported + " contracts.", false);
+      await loadRegister();
+    } catch (e) { say("Import failed: " + e.message, true); }
+  }
+
+  async function runReport() {
+    const m = $("rep-month").value.trim() || new Date().toISOString().slice(0, 7);
+    try {
+      const r = await (await api("/v1/reports/monthly?month=" + encodeURIComponent(m))).json();
+      $("rep-out").textContent = "Monthly review " + r.month + ": " + r.executed.length + " executed, " + r.stamped.length +
+        " stamped, " + r.outstanding.length + " still outstanding, " + r.late_stamped.length + " stamped late, " +
+        r.expiring.length + " expiring or expired. Estimated penalty exposure RM" + r.summary.penalty_exposure_rm + ".";
+    } catch (e) { say("Report failed: " + e.message, true); }
+  }
+
+  for (const b of document.querySelectorAll(".tab")) b.addEventListener("click", () => showTab(b.dataset.tab));
+  $("dash-refresh").addEventListener("click", () => loadDashboard().catch((e) => say(e.message, true)));
+  $("rep-run").addEventListener("click", runReport);
+  $("reg-go").addEventListener("click", () => loadRegister().catch((e) => say(e.message, true)));
+  $("reg-csv").addEventListener("click", async () => {
+    try { csvDownload("stsds-register.csv", await (await api("/v1/register.csv")).blob()); }
+    catch (e) { say("Export needs the checker role: " + e.message, true); }
+  });
+  $("a-add").addEventListener("click", addContract);
+  $("a-import").addEventListener("click", importCsv);
+
   $("signin").addEventListener("click", async () => {
     token = $("token").value.trim();
     $("token").value = "";

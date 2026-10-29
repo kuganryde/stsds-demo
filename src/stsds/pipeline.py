@@ -107,6 +107,7 @@ class TxnContext(BaseModel):
     vault: dict[str, str] | None = None
     qr: dict[str, str] | None = None
     signatures: int | None = None
+    stamped_on: dt.date | None = None
 
 
 class StageResult(BaseModel):
@@ -196,12 +197,15 @@ def bnds_fields(c: Classification) -> tuple[dict[str, str], list[dict[str, str]]
         "monthly_rent": f.monthly_rental_rm,
         "principal_or_consideration": f.consideration_or_loan_rm,
         "market_value": f.market_value_rm,
+        "net_tangible_assets": f.net_tangible_assets_rm,
     }
     for key, value in money.items():
         if value is not None:
             fields[key] = f"{value:.2f}"
     if f.lease_duration_months is not None:
         fields["lease_months"] = str(f.lease_duration_months)
+    if f.fixed_tenure is not None:
+        fields["fixed_tenure"] = "Y" if f.fixed_tenure else "N"
     if c.first_schedule_item.value == "ITEM_32A_MOT":
         fields["is_foreign"] = "Y" if c.is_foreign_buyer_or_entity else "N"
         if c.is_residential_property is not None:
@@ -731,7 +735,7 @@ class Pipeline:
             receipt = self.vault.archive(txn_id, contract, record, ctx.calc, str(ctx.lhdn_total), sijil)
         except GateFailure as exc:
             return self._halt(ctx, exc, "complete")
-        ctx.vault, ctx.state = receipt.__dict__.copy(), "VAULTED"
+        ctx.vault, ctx.state, ctx.stamped_on = receipt.__dict__.copy(), "VAULTED", self._today()
         self.store.delete_pdf(txn_id)
         return self._ok(ctx, "VAULTED", receipt.__dict__.copy())
 

@@ -53,6 +53,41 @@ class Item22(_S):
     secured_rate: int
 
 
+class Item4General(_S):
+    duty: Decimal
+
+
+class Item22Agreement(_S):
+    unit_rm: int
+    fixed_tenure_rate: int
+    no_tenure_rate: int
+
+
+class Item32Shares(_S):
+    unit_rm: int
+    rate: int
+
+
+class PenaltyBand(_S):
+    within_months: int | None  # months after the 30-day deadline; None = the open last band
+    min_rm: Decimal
+    pct: int
+
+
+class Penalty(_S):
+    bands: list[PenaltyBand]
+    basis: str
+    source: str
+
+    @model_validator(mode="after")
+    def _ordered(self) -> Penalty:
+        bounds = [b.within_months for b in self.bands]
+        finite = [b for b in bounds if b is not None]
+        if not bounds or finite != sorted(finite) or bounds[-1] is not None or None in bounds[:-1]:
+            raise ValueError("penalty bands must ascend and end with an open band")
+        return self
+
+
 class Item32(_S):
     unit_rm: int
     citizen_tiers: list[Tier]
@@ -84,6 +119,10 @@ class Rules(_S):
     item_49: Item49
     item_22: Item22
     item_32: Item32
+    item_4_general: Item4General
+    item_22_agreement: Item22Agreement
+    item_32_shares: Item32Shares
+    penalty: Penalty
     phase_start: dict[str, dt.date]
     signoff: Signoff | None = None
     notes: dict[str, str] = {}

@@ -15,6 +15,7 @@ import os
 import secrets
 import tempfile
 import time
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
@@ -24,10 +25,34 @@ from fastapi.responses import RedirectResponse
 
 from .api import create_app
 from .demo import Kit, make_pdf, sample_text
+from .register import ManualIn, Register
 from .users import UserDirectory, hash_token
 
 SEED_COOLDOWN_S = 15.0
 SEED_CAP = int(os.environ.get("DEMO_SEED_CAP", "60"))  # per process, so a public link cannot grow memory forever
+
+
+def _seed_register(register: Register) -> None:
+    """Fictional legacy contracts so the dashboard has something to show. Dates are relative to today."""
+    today = dt.date.today()
+
+    def d(days: int) -> dt.date:
+        return today + dt.timedelta(days=days)
+
+    rows = [
+        ("Master services agreement (sample)", "Demo Alpha Sdn Bhd", "Demo Delta Sdn Bhd", "SERVICE", d(-120), "600.00", "Aisha Rahman", d(240), "CERT-DEMO-0001", d(-100)),
+        ("Employment contract, J. Tan (sample)", "Demo Alpha Sdn Bhd", None, "EMPLOYMENT", d(-80), "10.00", "HR Team", None, "CERT-DEMO-0002", d(-75)),
+        ("Office tenancy, Level 5 (sample)", "Demo Beta Sdn Bhd", "Demo Landlord Sdn Bhd", "TENANCY", d(-200), "1080.00", "Facilities", d(35), "CERT-DEMO-0003", d(-190)),
+        ("Intercompany loan (sample)", "Demo Alpha Sdn Bhd", "Demo Gamma Sdn Bhd", "LOAN", d(-45), "1000.00", "Finance", None, None, None),
+        ("Shareholders agreement (sample)", "Demo Gamma Sdn Bhd", None, "SHAREHOLDER", d(-26), "10.00", "Legal", None, None, None),
+        ("Share transfer, Demo Gamma (sample)", "Demo Gamma Sdn Bhd", "Demo Beta Sdn Bhd", "SHARE_TRANSFER", d(-9), "900.00", "Legal", None, None, None),
+        ("Warehouse tenancy (sample)", "Demo Beta Sdn Bhd", "Demo Landlord Sdn Bhd", "TENANCY", d(-400), "720.00", "Facilities", d(-15), "CERT-DEMO-0004", d(-380)),
+    ]
+    for name, entity, cp, kind, executed, duty, owner, expiry, cert, stamped in rows:
+        register.add_manual(ManualIn(
+            name=name, entity=entity, counterparty=cp, doc_kind=kind, execution_date=executed,
+            duty_rm=Decimal(duty), contract_owner=owner, expiry_date=expiry, certificate_ref=cert,
+            stamped_on=stamped), "demo seed")
 
 
 def build() -> Any:
@@ -41,7 +66,9 @@ def build() -> Any:
         {"name": "Demo Reviewer", "roles": ["reviewer"], "token_sha256": hash_token(reviewer)},
         {"name": "Demo Checker", "roles": ["checker"], "token_sha256": hash_token(checker)},
     ])
-    app = create_app(kit.pipeline, kit.settings, users)
+    register = Register(work / "register.sqlite3", kit.pipeline.rules.penalty)
+    _seed_register(register)
+    app = create_app(kit.pipeline, kit.settings, users, register=register)
     state = {"seeded": 0, "last": 0.0}
     lock = asyncio.Lock()
 

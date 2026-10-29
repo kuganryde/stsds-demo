@@ -1,5 +1,5 @@
 {
-  "version": "2026.10-r1",
+  "version": "2026.10-r2",
   "effective_from": "2026-01-01",
   "min_duty": "10.00",
   "duplicate_copy_duty": "10.00",
@@ -10,10 +10,22 @@
   "item_49": {
     "unit_rm": 250,
     "brackets": [
-      { "max_months": 12, "rate": 1 },
-      { "max_months": 36, "rate": 3 },
-      { "max_months": 60, "rate": 5 },
-      { "max_months": null, "rate": 7 }
+      {
+        "max_months": 12,
+        "rate": 1
+      },
+      {
+        "max_months": 36,
+        "rate": 3
+      },
+      {
+        "max_months": 60,
+        "rate": 5
+      },
+      {
+        "max_months": null,
+        "rate": 7
+      }
     ],
     "indefinite_rate": 7
   },
@@ -24,10 +36,22 @@
   "item_32": {
     "unit_rm": 100,
     "citizen_tiers": [
-      { "upto": "100000", "rate": 1 },
-      { "upto": "500000", "rate": 2 },
-      { "upto": "1000000", "rate": 3 },
-      { "upto": null, "rate": 4 }
+      {
+        "upto": "100000",
+        "rate": 1
+      },
+      {
+        "upto": "500000",
+        "rate": 2
+      },
+      {
+        "upto": "1000000",
+        "rate": 3
+      },
+      {
+        "upto": null,
+        "rate": 4
+      }
     ],
     "foreign_residential_rate": 8,
     "foreign_other_rate": 4,
@@ -37,7 +61,10 @@
     "ITEM_49_LEASE": "2026-01-01",
     "ITEM_22_SECURITY": "2026-01-01",
     "ITEM_4_EMPLOYMENT": "2026-01-01",
-    "ITEM_32A_MOT": "2027-01-01"
+    "ITEM_32A_MOT": "2027-01-01",
+    "ITEM_4_GENERAL": "2099-01-01",
+    "ITEM_22_AGREEMENT": "2099-01-01",
+    "ITEM_32_SHARES": "2099-01-01"
   },
   "signoff": null,
   "notes": {
@@ -48,13 +75,70 @@
     "item_22": "Only secured loans at 0.5% (RM5 per RM1,000 or part) are computed automatically. Other loan or security types are routed to review.",
     "item_4": "Wage exemption of RM3,000/month reported by PwC Malaysia Tax Booklet; KPMG (Dec 2025) described it as a Finance Bill proposal. Confirm enactment before sign-off.",
     "duplicate_copy_duty": "RM10 per duplicate copy is stated only in the blueprint and is unverified.",
-    "min_duty": "RM10 minimum duty under Section 36CB (corroborated by two secondary sources)."
+    "min_duty": "RM10 minimum duty under Section 36CB (corroborated by two secondary sources).",
+    "new_items": "ITEM_4_GENERAL, ITEM_22_AGREEMENT and ITEM_32_SHARES are NOT live: phase_start is set to 2099-01-01 until the Head of Tax confirms each rate against the gazetted First Schedule. Secondary sources disagree on item numbers and on whether a service or loan agreement is nominal RM10 or ad valorem. Change the date to enable. The parity gate against the LHDN calculation still stops any filing where our figure differs.",
+    "penalty": "Late-stamping penalty bands are an ESTIMATE for exposure reporting only. The LHDN guideline of 6 Nov 2025 shows two bands (within 3 months: RM50 or 10%; later: RM100 or 20%). Older secondary sources show three bands (RM25/5%, RM50/10%, RM100/20%). Head of Tax to confirm. The app never files or pays a penalty."
   },
   "sources": [
-    { "name": "STSDS-SDLC-2026-V1 blueprint", "ref": "Section 5 statutory table" },
-    { "name": "PwC Malaysia Tax Booklet 2025/2026, Stamp Duty", "ref": "https://www.pwc.com/my/en/publications/mtb/stamp-duty.html" },
-    { "name": "StashAway Malaysia tenancy stamp duty guide", "ref": "https://www.stashaway.my/r/stamp-duty-tenancy-agreement-malaysia" },
-    { "name": "PropCashflow tenancy stamp duty calculator", "ref": "https://propcashflow.my/tools/stamp-duty-tenancy-calculator/" },
-    { "name": "KPMG Malaysia, Stamp duty self-assessment era (Dec 2025)", "ref": "https://assets.kpmg.com/content/dam/kpmgsites/my/pdf/2025/12/stamp-duty-in-malaysia-are-you-ready-for-the-self-assessment-era.pdf.coredownload.inline.pdf" }
-  ]
+    {
+      "name": "STSDS-SDLC-2026-V1 blueprint",
+      "ref": "Section 5 statutory table"
+    },
+    {
+      "name": "PwC Malaysia Tax Booklet 2025/2026, Stamp Duty",
+      "ref": "https://www.pwc.com/my/en/publications/mtb/stamp-duty.html"
+    },
+    {
+      "name": "StashAway Malaysia tenancy stamp duty guide",
+      "ref": "https://www.stashaway.my/r/stamp-duty-tenancy-agreement-malaysia"
+    },
+    {
+      "name": "PropCashflow tenancy stamp duty calculator",
+      "ref": "https://propcashflow.my/tools/stamp-duty-tenancy-calculator/"
+    },
+    {
+      "name": "KPMG Malaysia, Stamp duty self-assessment era (Dec 2025)",
+      "ref": "https://assets.kpmg.com/content/dam/kpmgsites/my/pdf/2025/12/stamp-duty-in-malaysia-are-you-ready-for-the-self-assessment-era.pdf.coredownload.inline.pdf"
+    },
+    {
+      "name": "LHDN guideline: penalties on late-stamped instruments (6 Nov 2025)",
+      "ref": "https://www.hasil.gov.my/wp-content/uploads/20251106-garis-panduan-pengenaan-penalti-ke-atas-surat-cara-yang-lewat-disetemkan-di-bawah-akta-setem-1949.pdf"
+    },
+    {
+      "name": "Boardroom Malaysia stamp duty FAQ (Apr 2026), secondary",
+      "ref": "https://www.boardroomlimited.com/my/2026/04/24/malaysia-stamp-duty-faq/"
+    },
+    {
+      "name": "Global Advisory Experts, share sale agreement stamp duty, secondary",
+      "ref": "https://globaladvisoryexperts.com/share-sale-agreement-stamp-duty-malaysia/"
+    }
+  ],
+  "item_4_general": {
+    "duty": "10.00"
+  },
+  "item_22_agreement": {
+    "unit_rm": 1000,
+    "fixed_tenure_rate": 5,
+    "no_tenure_rate": 10
+  },
+  "item_32_shares": {
+    "unit_rm": 1000,
+    "rate": 3
+  },
+  "penalty": {
+    "bands": [
+      {
+        "within_months": 3,
+        "min_rm": "50.00",
+        "pct": 10
+      },
+      {
+        "within_months": null,
+        "min_rm": "100.00",
+        "pct": 20
+      }
+    ],
+    "basis": "deficient duty",
+    "source": "LHDN guideline on penalties for late stamping under the Stamp Act 1949, 6 Nov 2025"
+  }
 }
