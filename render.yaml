@@ -1,0 +1,13 @@
+# Public simulated demo. NOT production: simulated MyTax, payment and vault.
+services:
+  - type: web
+    name: stsds-demo
+    runtime: python
+    plan: free
+    region: singapore
+    buildCommand: pip install -e .
+    startCommand: uvicorn stsds.hosted:app --host 0.0.0.0 --port $PORT --no-server-header --workers 1
+    healthCheckPath: /healthz
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7

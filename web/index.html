@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>STSDS Live Demo</title>
+<meta name="description" content="Try the STSDS e-Duti Setem automation: upload, score, review, approve, pay, stamp and verify. Simulated, nothing is filed.">
+<style>
+:root{--bg:#F3F4F1;--ink:#0F1E2E;--mute:#4B5A69;--card:#fff;--line:#D9DDD6;--teal:#0E6B60;--amber:#FFEFC9;--amberink:#6B4300}
+@media (prefers-color-scheme:dark){:root{--bg:#0F1E2E;--ink:#F3F4F1;--mute:#B9C7D6;--card:#1A2E43;--line:#2A4157;--teal:#4FD1BE;--amber:#3A2F10;--amberink:#F2B94B}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:880px;margin:0 auto;padding:32px 16px 64px;display:flex;flex-direction:column;gap:20px}
+h1{margin:0;font-size:clamp(28px,5vw,40px);line-height:1.15}h2{margin:0 0 8px;font-size:18px}p{margin:0}
+.eyebrow{font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--teal)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px}
+.warn{background:var(--amber);color:var(--amberink);border-radius:12px;padding:14px 18px;font-size:15px}
+ol{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:6px}
+.tok{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px}
+code{font-family:ui-monospace,Menlo,monospace;font-size:14px;background:rgba(127,127,127,.15);padding:4px 8px;border-radius:6px;word-break:break-all}
+button,.btn{min-height:44px;padding:0 20px;border-radius:10px;border:2px solid var(--ink);background:transparent;color:var(--ink);font:600 16px inherit;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center}
+.primary{background:var(--teal);border-color:var(--teal);color:#fff}@media (prefers-color-scheme:dark){.primary{color:#0F1E2E}}
+button:focus-visible,.btn:focus-visible{outline:3px solid #1B6FD1;outline-offset:2px}
+.row{display:flex;flex-wrap:wrap;gap:12px}#msg{min-height:1.5em;font-size:15px;color:var(--mute)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+</style>
+</head>
+<body>
+<main>
+  <header><p class="eyebrow">RYDETECH GLOBAL ENTERPRISE</p><h1>STSDS live demo</h1>
+  <p style="color:var(--mute);margin-top:8px">Upload, score, review, approve, pay, stamp and verify an e-Duti Setem filing, end to end.</p></header>
+  <p class="warn"><b>Simulated.</b> MyTax, the payment gateway and the vault are simulated. Nothing is filed or paid, and the sample data is fictional. The first load can take about 30 seconds while the demo server wakes up.</p>
+  <section class="card" aria-labelledby="s1"><h2 id="s1">1. Load a sample batch</h2>
+    <p>Six mixed contracts: clean ones are filed automatically, a poor scan waits for a reviewer, a RM 25,000 loan waits for a second approver, plus a duplicate and a corrupt file.</p>
+    <div class="row" style="margin-top:12px"><button class="primary" id="seed" type="button">Load sample batch</button></div><p id="msg" role="status" aria-live="polite"></p></section>
+  <section class="card" aria-labelledby="s2"><h2 id="s2">2. Open the console and sign in</h2>
+    <p>Sign in as the reviewer to correct or approve the poor scan. Then sign in as the checker (a different person) to approve the large loan.</p>
+    <div class="grid" style="margin-top:12px">
+      <div><b>Reviewer token</b><div class="tok"><code id="rv">loading…</code><button type="button" data-copy="rv">Copy</button></div></div>
+      <div><b>Checker token</b><div class="tok"><code id="ck">loading…</code><button type="button" data-copy="ck">Copy</button></div></div></div>
+    <div class="row" style="margin-top:16px"><a class="btn" href="/console" target="_blank" rel="noopener">Open console</a></div></section>
+  <section class="card" aria-labelledby="s3"><h2 id="s3">What to look for</h2>
+    <ol><li>Each document has a confidence score. 0.95 or more runs on its own.</li>
+    <li>Anything lower stops for a person, and every human edit forces a second approver.</li>
+    <li>Every filing is checked against the official calculation to the sen before it is paid.</li>
+    <li>After stamping, nine final checks run before the case is marked complete.</li></ol></section>
+</main>
+<script>
+(function(){"use strict";
+var msg=document.getElementById("msg");
+function say(t){msg.textContent=t}
+fetch("/demo/info",{cache:"no-store"}).then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(d){
+  document.getElementById("rv").textContent=d.reviewer_token;document.getElementById("ck").textContent=d.checker_token;
+}).catch(function(){say("The demo server is waking up. Reload in a few seconds.")});
+document.getElementById("seed").addEventListener("click",function(){
+  say("Loading…");
+  fetch("/demo/seed",{method:"POST"}).then(function(r){return r.json().then(function(j){return{ok:r.ok,j:j}})}).then(function(x){
+    say(x.ok?"Batch loaded: "+x.j.accepted+" accepted, "+x.j.rejected_at_intake+" rejected at intake. Open the console.":(x.j.detail||"Could not load a batch."));
+  }).catch(function(){say("Could not reach the demo server. Try again.")});
+});
+Array.prototype.forEach.call(document.querySelectorAll("[data-copy]"),function(b){
+  b.addEventListener("click",function(){var t=document.getElementById(b.getAttribute("data-copy")).textContent;
+    if(navigator.clipboard){navigator.clipboard.writeText(t).then(function(){b.textContent="Copied";setTimeout(function(){b.textContent="Copy"},1500)})}});
+});
+})();
+</script>
+</body>
+</html>

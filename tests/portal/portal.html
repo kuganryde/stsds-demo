@@ -1,0 +1,33 @@
+<!doctype html>
+<html><body>
+<!-- Mock portal used only to exercise the Playwright mechanics. It is NOT MyTax. -->
+<button id="entry-lease" onclick="document.getElementById('f').style.display='block'">Lease</button>
+<div id="f" style="display:none">
+  <input id="date"><input id="rent"><input id="months"><input id="dup">
+  <button id="party-add" onclick="document.getElementById('p').style.display='block'">+</button>
+  <div id="p" style="display:none">
+    <input id="pname"><input id="ptin">
+    <select id="ptype"><option>NRIC</option><option>BRN</option><option>PASSPORT</option></select>
+    <input id="pid">
+  </div>
+  <button id="save" onclick="save()">Save draft</button>
+</div>
+<span id="total"></span><span id="draftid"></span>
+<input id="lookup">
+<button id="submit" onclick="document.getElementById('c').style.display='block'">Hantar</button>
+<div id="c" style="display:none"><button id="confirm" onclick="confirmIt()">Confirm</button></div>
+<span id="bill"></span><span id="va"></span>
+<button id="opencert" onclick="document.getElementById('dl').style.display='inline'">Certificate</button>
+<a id="dl" href="sijil.pdf" download style="display:none">Download</a>
+<script>
+function save(){
+  var rent=parseFloat(document.getElementById('rent').value||'0');
+  document.getElementById('total').textContent='RM '+(Math.ceil(rent*12/250)).toFixed(2);
+  document.getElementById('draftid').textContent='D-42';
+}
+function confirmIt(){
+  document.getElementById('bill').textContent='BILL-777';
+  document.getElementById('va').textContent='VA-555';
+}
+</script>
+</body></html>

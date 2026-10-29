@@ -1,0 +1,92 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  secrets-scan:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: gitleaks/gitleaks-action@v2
+        env: { GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}" }
+
+  quality:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: pip }
+      - run: pip install -e ".[dev]"
+      - name: Lint (includes flake8-bandit security rules)
+        run: ruff check src tests
+      - name: Types
+        run: mypy src
+      - name: SAST
+        run: bandit -r src -ll
+      - name: Dependency vulnerabilities
+        run: pip-audit
+      - name: Statutory + security tests (coverage gate 90%)
+        run: pytest --cov=stsds --cov-report=term-missing --cov-report=xml
+      - name: SBOM
+        run: cyclonedx-py environment -o sbom.cdx.json
+      - uses: actions/upload-artifact@v4
+        with: { name: sbom, path: sbom.cdx.json }
+
+  rules-governance:
+    # A change to statutory rates must be reviewed by the tax owner (CODEOWNERS) and can never
+    # carry a sign-off that was not added by that reviewer.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -e .
+      - name: Validate rules schema and ordering
+        run: python -c "from stsds.rules import load_rules; r,s=load_rules('rules/stamp_rules.json'); print(r.version, s)"
+
+  iac-policy:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - run: terraform -chdir=infra/terraform init -backend=false && terraform -chdir=infra/terraform validate
+      - name: Policy as code (OPA/conftest)
+        uses: instrumenta/conftest-action@master
+        with: { files: infra/terraform, policy: policy }
+
+  image:
+    needs: [quality, secrets-scan]
+    runs-on: ubuntu-24.04
+    permissions: { contents: read, security-events: write }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - run: docker build -t stsds:${{ github.sha }} .
+      - uses: aquasecurity/trivy-action@0.24.0
+        with:
+          image-ref: stsds:${{ github.sha }}
+          severity: CRITICAL,HIGH
+          exit-code: "1"
+          ignore-unfixed: true
+
+  deploy-staging:
+    # GitOps: CI never touches production. It updates the image tag in the manifests repo,
+    # and ArgoCD reconciles. Production promotion needs the Head of Tax + DevSecOps approvals
+    # (GitHub environment protection) after 30 days of shadow-mode parity.
+    if: github.ref == 'refs/heads/main'
+    needs: [image, rules-governance, iac-policy]
+    runs-on: ubuntu-24.04
+    environment: staging
+    steps:
+      - run: echo "Update image tag in the GitOps manifests repo (ArgoCD syncs staging)."

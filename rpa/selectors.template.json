@@ -1,0 +1,63 @@
+{
+  "_comment": "Copy to rpa/selectors.json and replace every UAT_REQUIRED during shadow-mode UAT against the live MyTax portal. The worker refuses to run while any placeholder remains. bill_lookup and bill_stamped_marker are optional: delete both to skip the portal stamped-status check. qr_valid_marker, qr_certificate_ref and qr_amount are optional too: delete them to skip reading the certificate QR verification page (the QR check is then recorded as SKIPPED).",
+  "base_url": "https://mytax.hasil.gov.my",
+  "new_bnds": "UAT_REQUIRED",
+  "save_draft": "UAT_REQUIRED",
+  "summary_total": "UAT_REQUIRED",
+  "draft_id": "UAT_REQUIRED",
+  "draft_lookup": "UAT_REQUIRED",
+  "submit": "UAT_REQUIRED",
+  "confirm_submit": "UAT_REQUIRED",
+  "bill_no": "UAT_REQUIRED",
+  "virtual_account": "UAT_REQUIRED",
+  "open_certificate": "UAT_REQUIRED",
+  "download_sijil": "UAT_REQUIRED",
+  "qr_valid_marker": "UAT_REQUIRED",
+  "qr_certificate_ref": "UAT_REQUIRED",
+  "qr_amount": "UAT_REQUIRED",
+  "party_add": "UAT_REQUIRED",
+  "party_name": "UAT_REQUIRED",
+  "party_tin": "UAT_REQUIRED",
+  "party_id_type": "UAT_REQUIRED",
+  "party_id_number": "UAT_REQUIRED",
+  "modules": {
+    "SEWA_PAJAKAN": {
+      "entry": "UAT_REQUIRED",
+      "fields": {
+        "execution_date": "UAT_REQUIRED",
+        "monthly_rent": "UAT_REQUIRED",
+        "lease_months": "UAT_REQUIRED",
+        "duplicate_copies": "UAT_REQUIRED"
+      }
+    },
+    "SEKURITI": {
+      "entry": "UAT_REQUIRED",
+      "fields": {
+        "execution_date": "UAT_REQUIRED",
+        "principal_or_consideration": "UAT_REQUIRED",
+        "duplicate_copies": "UAT_REQUIRED"
+      }
+    },
+    "PENYETEMAN_AM": {
+      "entry": "UAT_REQUIRED",
+      "fields": {
+        "execution_date": "UAT_REQUIRED",
+        "monthly_wage": "UAT_REQUIRED",
+        "duplicate_copies": "UAT_REQUIRED"
+      }
+    },
+    "PINDAH_MILIK_HARTANAH": {
+      "entry": "UAT_REQUIRED",
+      "fields": {
+        "execution_date": "UAT_REQUIRED",
+        "principal_or_consideration": "UAT_REQUIRED",
+        "market_value": "UAT_REQUIRED",
+        "is_foreign": "UAT_REQUIRED",
+        "is_residential": "UAT_REQUIRED",
+        "duplicate_copies": "UAT_REQUIRED"
+      }
+    }
+  },
+  "bill_lookup": "UAT_REQUIRED",
+  "bill_stamped_marker": "UAT_REQUIRED"
+}

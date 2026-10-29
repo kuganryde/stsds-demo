@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>STSDS Review Console</title>
+  <link rel="stylesheet" href="/console/app.css">
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <header>
+    <h1>STSDS Review Console</h1>
+    <p class="sub">RYDETECH GLOBAL ENTERPRISE · human-in-the-loop for stamp duty filings</p>
+  </header>
+
+  <main id="main">
+    <section aria-labelledby="auth-h" class="card">
+      <h2 id="auth-h">Sign in</h2>
+      <p class="hint">Paste your personal access token. It stays in this page's memory only and is gone when you close or reload the tab.</p>
+      <div class="row">
+        <label for="token">Access token</label>
+        <input id="token" type="password" autocomplete="off" spellcheck="false">
+        <button id="signin" type="button">Load my queue</button>
+      </div>
+      <p id="status" role="status" aria-live="polite"></p>
+    </section>
+
+    <section aria-labelledby="batch-h" class="card">
+      <h2 id="batch-h">Submit documents</h2>
+      <p class="hint">Choose several PDFs. Each is validated and scored on its own: high-confidence documents are processed automatically, the rest appear in the queue below.</p>
+      <div class="row">
+        <label for="files">PDF files</label>
+        <input id="files" type="file" accept="application/pdf" multiple>
+        <button id="upload" type="button">Submit batch</button>
+      </div>
+      <div id="batch-result"></div>
+    </section>
+
+    <section aria-labelledby="queue-h" class="card">
+      <h2 id="queue-h">Waiting for a person</h2>
+      <div class="table-wrap">
+        <table>
+          <caption class="sr">Documents waiting for review or approval, lowest score first</caption>
+          <thead><tr><th scope="col">Document</th><th scope="col">State</th><th scope="col">Score</th><th scope="col">Duty (RM)</th><th scope="col">Why</th><th scope="col"><span class="sr">Action</span></th></tr></thead>
+          <tbody id="queue"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="detail" class="card" hidden aria-labelledby="detail-h" tabindex="-1">
+      <h2 id="detail-h">Document</h2>
+      <div id="meta"></div>
+      <div class="grid">
+        <div>
+          <h3>Extracted by the model</h3>
+          <label for="extraction" class="sr">Extraction (JSON). Edit any wrong value.</label>
+          <textarea id="extraction" rows="18" spellcheck="false"></textarea>
+          <p class="hint">Edit only what is wrong. A changed filing needs a second person to approve before it is submitted.</p>
+        </div>
+        <div>
+          <h3>Text read from the document</h3>
+          <pre id="doctext" tabindex="0"></pre>
+          <button id="viewpdf" type="button" class="secondary">Open the original PDF in a new tab</button>
+        </div>
+      </div>
+      <fieldset id="review-actions">
+        <legend>Your decision</legend>
+        <label class="check"><input id="attest" type="checkbox"> I checked every figure, date and party against the original document.</label>
+        <label for="note">Note (optional)</label>
+        <input id="note" type="text" maxlength="300">
+        <div class="row">
+          <button id="approve" type="button">Approve and continue</button>
+          <button id="reject" type="button" class="danger">Reject</button>
+        </div>
+      </fieldset>
+      <fieldset id="checker-actions" hidden>
+        <legend>Second approval</legend>
+        <p id="checker-note"></p>
+        <div class="row"><button id="approve-filing" type="button">Approve this filing</button></div>
+      </fieldset>
+    </section>
+  </main>
+  <script src="/console/app.js"></script>
+</body>
+</html>

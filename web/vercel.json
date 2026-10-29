@@ -1,0 +1,15 @@
+{
+  "rewrites": [
+    { "source": "/console", "destination": "https://RENDER_HOST/console" },
+    { "source": "/console/:path*", "destination": "https://RENDER_HOST/console/:path*" },
+    { "source": "/v1/:path*", "destination": "https://RENDER_HOST/v1/:path*" },
+    { "source": "/demo/:path*", "destination": "https://RENDER_HOST/demo/:path*" }
+  ],
+  "headers": [
+    { "source": "/(.*)", "headers": [
+      { "key": "X-Content-Type-Options", "value": "nosniff" },
+      { "key": "Referrer-Policy", "value": "no-referrer" },
+      { "key": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains" }
+    ] }
+  ]
+}

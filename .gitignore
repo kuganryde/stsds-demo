@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+.stsds-demo/
+demo-samples/
+*.egg-info/
+.venv/
+.env
+*.whl

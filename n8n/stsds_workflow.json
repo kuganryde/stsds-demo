@@ -1,0 +1,136 @@
+{
+  "name": "STSDS e-Duti Setem Pipeline",
+  "nodes": [
+    {
+      "id": "n01", "name": "1. Contract Webhook", "type": "n8n-nodes-base.webhook", "typeVersion": 2, "position": [0, 300],
+      "webhookId": "stsds-ingest",
+      "parameters": { "httpMethod": "POST", "path": "stsds-ingest", "responseMode": "onReceived", "options": { "rawBody": true } }
+    },
+    {
+      "id": "n02", "name": "2. Ingest & OCR (FastAPI)", "type": "n8n-nodes-base.httpRequest", "typeVersion": 4.2, "position": [220, 300],
+      "parameters": {
+        "method": "POST", "url": "http://engine:8080/v1/ingest",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [
+          { "name": "X-Signature", "value": "={{ $json.headers['x-signature'] }}" },
+          { "name": "X-Timestamp", "value": "={{ $json.headers['x-timestamp'] }}" }
+        ] },
+        "sendBody": true, "contentType": "binaryData", "inputDataFieldName": "data",
+        "options": { "timeout": 60000 }
+      }
+    },
+    { "id": "n03", "name": "2b. Ingested?", "type": "n8n-nodes-base.if", "typeVersion": 2, "position": [440, 300],
+      "parameters": { "conditions": { "options": { "caseSensitive": true, "typeValidation": "strict" },
+        "conditions": [ { "id": "c1", "leftValue": "={{ $json.ok }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equals" } } ], "combinator": "and" } } },
+    {
+      "id": "n04", "name": "3. Ollama Classifier", "type": "n8n-nodes-base.httpRequest", "typeVersion": 4.2, "position": [660, 200],
+      "credentials": { "httpHeaderAuth": { "id": "STSDS_ENGINE", "name": "STSDS Engine Token" } },
+      "parameters": { "method": "POST", "url": "=http://engine:8080/v1/classify/{{ $json.txn_id }}",
+        "authentication": "genericCredentialType", "genericAuthType": "httpHeaderAuth", "options": { "timeout": 180000 } }
+    },
+    { "id": "n05", "name": "3b. Classified?", "type": "n8n-nodes-base.if", "typeVersion": 2, "position": [880, 200],
+      "parameters": { "conditions": { "options": { "caseSensitive": true, "typeValidation": "strict" },
+        "conditions": [ { "id": "c2", "leftValue": "={{ $json.ok }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equals" } } ], "combinator": "and" } } },
+    {
+      "id": "n06", "name": "4. Deterministic Duty Engine", "type": "n8n-nodes-base.httpRequest", "typeVersion": 4.2, "position": [1100, 120],
+      "credentials": { "httpHeaderAuth": { "id": "STSDS_ENGINE", "name": "STSDS Engine Token" } },
+      "parameters": { "method": "POST", "url": "=http://engine:8080/v1/calculate/{{ $json.txn_id }}",
+        "authentication": "genericCredentialType", "genericAuthType": "httpHeaderAuth" }
+    },
+    { "id": "n07", "name": "4b. Calculated?", "type": "n8n-nodes-base.if", "typeVersion": 2, "position": [1320, 120],
+      "parameters": { "conditions": { "options": { "caseSensitive": true, "typeValidation": "strict" },
+        "conditions": [ { "id": "c3", "leftValue": "={{ $json.ok }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equals" } } ], "combinator": "and" } } },
+    {
+      "id": "n08", "name": "5. TIN & Non-JPPH Gate", "type": "n8n-nodes-base.httpRequest", "typeVersion": 4.2, "position": [1540, 60],
+      "credentials": { "httpHeaderAuth": { "id": "STSDS_ENGINE", "name": "STSDS Engine Token" } },
+      "parameters": { "method": "POST", "url": "=http://engine:8080/v1/preflight/{{ $json.txn_id }}",
+        "authentication": "genericCredentialType", "genericAuthType": "httpHeaderAuth" }
+    },
+    { "id": "n09", "name": "5b. Gate Passed? (Hard Gate 1)", "type": "n8n-nodes-base.if", "typeVersion": 2, "position": [1760, 60],
+      "parameters": { "conditions": { "options": { "caseSensitive": true, "typeValidation": "strict" },
+        "conditions": [ { "id": "c4", "leftValue": "={{ $json.ok }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equals" } } ], "combinator": "and" } } },
+    {
+      "id": "n10", "name": "6. Playwright Draft RPA", "type": "n8n-nodes-base.httpRequest", "typeVersion": 4.2, "position": [1980, 0],
+      "credentials": { "httpHeaderAuth": { "id": "STSDS_ENGINE", "name": "STSDS Engine Token" } },
+      "parameters": { "method": "POST", "url": "=http://engine:8080/v1/rpa/draft/{{ $json.txn_id }}",
+        "authentication": "genericCredentialType", "genericAuthType": "httpHeaderAuth", "options": { "timeout": 240000 } }
+    },
+    { "id": "n11", "name": "7. Parity Gate: LHDN == Engine? (Hard Gate 2)", "type": "n8n-nodes-base.if", "typeVersion": 2, "position": [2200, 0],
+      "parameters": { "conditions": { "options": { "caseSensitive": true, "typeValidation": "strict" },
+        "conditions": [
+          { "id": "c5", "leftValue": "={{ $json.ok }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equals" } },
+          { "id": "c6", "leftValue": "={{ $json.state }}", "rightValue": "PARITY_OK", "operator": { "type": "string", "operation": "equals" } }
+        ], "combinator": "and" } } },
+    {
+      "id": "n12", "name": "8. Submit (maker-checker aware)", "type": "n8n-nodes-base.httpRequest", "typeVersion": 4.2, "position": [2420, -60],
+      "credentials": { "httpHeaderAuth": { "id": "STSDS_ENGINE", "name": "STSDS Engine Token" } },
+      "parameters": { "method": "POST", "url": "=http://engine:8080/v1/rpa/submit/{{ $('6. Playwright Draft RPA').item.json.txn_id }}",
+        "authentication": "genericCredentialType", "genericAuthType": "httpHeaderAuth",
+        "sendBody": true, "specifyBody": "json", "jsonBody": "={{ { approved_by: $json.approved_by || null } }}" }
+    },
+    { "id": "n13", "name": "8b. Awaiting Checker?", "type": "n8n-nodes-base.if", "typeVersion": 2, "position": [2640, -60],
+      "parameters": { "conditions": { "options": { "caseSensitive": true, "typeValidation": "strict" },
+        "conditions": [ { "id": "c7", "leftValue": "={{ $json.state }}", "rightValue": "AWAITING_APPROVAL", "operator": { "type": "string", "operation": "equals" } } ], "combinator": "and" } } },
+    {
+      "id": "n14", "name": "8c. Maker-Checker Approval (Treasury)", "type": "n8n-nodes-base.wait", "typeVersion": 1.1, "position": [2860, -160],
+      "webhookId": "stsds-approve",
+      "parameters": { "resume": "form", "formTitle": "STSDS approval",
+        "formFields": { "values": [ { "fieldLabel": "approved_by", "requiredField": true } ] } }
+    },
+    { "id": "n15", "name": "8d. Submitted?", "type": "n8n-nodes-base.if", "typeVersion": 2, "position": [2860, 20],
+      "parameters": { "conditions": { "options": { "caseSensitive": true, "typeValidation": "strict" },
+        "conditions": [ { "id": "c8", "leftValue": "={{ $json.state }}", "rightValue": "SUBMITTED", "operator": { "type": "string", "operation": "equals" } } ], "combinator": "and" } } },
+    {
+      "id": "n16", "name": "8e. Await ByrHasil Payment Confirmation", "type": "n8n-nodes-base.wait", "typeVersion": 1.1, "position": [3080, -40],
+      "webhookId": "stsds-paid", "parameters": { "resume": "webhook", "httpMethod": "POST", "options": {} }
+    },
+    {
+      "id": "n17", "name": "8f. Capture One-Time Sijil & Vault (S3 WORM)", "type": "n8n-nodes-base.httpRequest", "typeVersion": 4.2, "position": [3300, -40],
+      "credentials": { "httpHeaderAuth": { "id": "STSDS_ENGINE", "name": "STSDS Engine Token" } },
+      "parameters": { "method": "POST", "url": "=http://engine:8080/v1/rpa/complete/{{ $('8. Submit (maker-checker aware)').item.json.txn_id }}",
+        "authentication": "genericCredentialType", "genericAuthType": "httpHeaderAuth", "options": { "timeout": 240000 } }
+    },
+    { "id": "n18", "name": "8g. Vaulted?", "type": "n8n-nodes-base.if", "typeVersion": 2, "position": [3520, -40],
+      "parameters": { "conditions": { "options": { "caseSensitive": true, "typeValidation": "strict" },
+        "conditions": [ { "id": "c9", "leftValue": "={{ $json.state }}", "rightValue": "VAULTED", "operator": { "type": "string", "operation": "equals" } } ], "combinator": "and" } } },
+    {
+      "id": "n19", "name": "9. Error Handler (halt draft, build alert)", "type": "n8n-nodes-base.code", "typeVersion": 2, "position": [1320, 520],
+      "parameters": { "jsCode": "// Node 9: normalise any failure into an alert. No PII: transaction id and reason code only.\nconst j = $input.first().json;\nconst halt = j.halt || { code: 'WORKFLOW_ERROR', message: 'Unexpected failure', route: 'HALT' };\nreturn [{ json: { txn_id: j.txn_id || '0'.repeat(32), code: halt.code, message: halt.message, route: halt.route } }];" }
+    },
+    {
+      "id": "n20", "name": "10. Executive Telegram Alert", "type": "n8n-nodes-base.httpRequest", "typeVersion": 4.2, "position": [1540, 520],
+      "credentials": { "httpHeaderAuth": { "id": "STSDS_ENGINE", "name": "STSDS Engine Token" } },
+      "parameters": { "method": "POST", "url": "http://engine:8080/v1/alert",
+        "authentication": "genericCredentialType", "genericAuthType": "httpHeaderAuth",
+        "sendBody": true, "specifyBody": "json",
+        "jsonBody": "={{ { txn_id: $json.txn_id, code: $json.code, message: $json.message, route: $json.route } }}" }
+    },
+    {
+      "id": "n21", "name": "Workflow Error Trigger", "type": "n8n-nodes-base.errorTrigger", "typeVersion": 1, "position": [1100, 520], "parameters": {}
+    }
+  ],
+  "connections": {
+    "1. Contract Webhook": { "main": [[{ "node": "2. Ingest & OCR (FastAPI)", "type": "main", "index": 0 }]] },
+    "2. Ingest & OCR (FastAPI)": { "main": [[{ "node": "2b. Ingested?", "type": "main", "index": 0 }]] },
+    "2b. Ingested?": { "main": [[{ "node": "3. Ollama Classifier", "type": "main", "index": 0 }], [{ "node": "9. Error Handler (halt draft, build alert)", "type": "main", "index": 0 }]] },
+    "3. Ollama Classifier": { "main": [[{ "node": "3b. Classified?", "type": "main", "index": 0 }]] },
+    "3b. Classified?": { "main": [[{ "node": "4. Deterministic Duty Engine", "type": "main", "index": 0 }], [{ "node": "9. Error Handler (halt draft, build alert)", "type": "main", "index": 0 }]] },
+    "4. Deterministic Duty Engine": { "main": [[{ "node": "4b. Calculated?", "type": "main", "index": 0 }]] },
+    "4b. Calculated?": { "main": [[{ "node": "5. TIN & Non-JPPH Gate", "type": "main", "index": 0 }], [{ "node": "9. Error Handler (halt draft, build alert)", "type": "main", "index": 0 }]] },
+    "5. TIN & Non-JPPH Gate": { "main": [[{ "node": "5b. Gate Passed? (Hard Gate 1)", "type": "main", "index": 0 }]] },
+    "5b. Gate Passed? (Hard Gate 1)": { "main": [[{ "node": "6. Playwright Draft RPA", "type": "main", "index": 0 }], [{ "node": "9. Error Handler (halt draft, build alert)", "type": "main", "index": 0 }]] },
+    "6. Playwright Draft RPA": { "main": [[{ "node": "7. Parity Gate: LHDN == Engine? (Hard Gate 2)", "type": "main", "index": 0 }]] },
+    "7. Parity Gate: LHDN == Engine? (Hard Gate 2)": { "main": [[{ "node": "8. Submit (maker-checker aware)", "type": "main", "index": 0 }], [{ "node": "9. Error Handler (halt draft, build alert)", "type": "main", "index": 0 }]] },
+    "8. Submit (maker-checker aware)": { "main": [[{ "node": "8b. Awaiting Checker?", "type": "main", "index": 0 }]] },
+    "8b. Awaiting Checker?": { "main": [[{ "node": "8c. Maker-Checker Approval (Treasury)", "type": "main", "index": 0 }], [{ "node": "8d. Submitted?", "type": "main", "index": 0 }]] },
+    "8c. Maker-Checker Approval (Treasury)": { "main": [[{ "node": "8. Submit (maker-checker aware)", "type": "main", "index": 0 }]] },
+    "8d. Submitted?": { "main": [[{ "node": "8e. Await ByrHasil Payment Confirmation", "type": "main", "index": 0 }], [{ "node": "9. Error Handler (halt draft, build alert)", "type": "main", "index": 0 }]] },
+    "8e. Await ByrHasil Payment Confirmation": { "main": [[{ "node": "8f. Capture One-Time Sijil & Vault (S3 WORM)", "type": "main", "index": 0 }]] },
+    "8f. Capture One-Time Sijil & Vault (S3 WORM)": { "main": [[{ "node": "8g. Vaulted?", "type": "main", "index": 0 }]] },
+    "8g. Vaulted?": { "main": [[], [{ "node": "9. Error Handler (halt draft, build alert)", "type": "main", "index": 0 }]] },
+    "9. Error Handler (halt draft, build alert)": { "main": [[{ "node": "10. Executive Telegram Alert", "type": "main", "index": 0 }]] },
+    "Workflow Error Trigger": { "main": [[{ "node": "9. Error Handler (halt draft, build alert)", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "saveDataSuccessExecution": "none", "saveExecutionProgress": false },
+  "meta": { "note": "Import into n8n, create the 'STSDS Engine Token' header-auth credential (Authorization: Bearer <engine token>), then smoke-test in shadow mode. Not executed against a live n8n instance in this build." }
+}

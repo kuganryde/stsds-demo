@@ -1,0 +1,85 @@
+# Four decoupled zones on an internal bridge. Only n8n's webhook is published; the engine,
+# Ollama, Qdrant and Postgres have no host ports. Secrets come from files, never the image.
+name: stsds
+
+networks:
+  internal:
+    internal: true # no outbound route: the data plane cannot exfiltrate
+  egress:            # only the services that must reach LHDN / S3 / Telegram
+
+secrets:
+  engine_token:        { file: ./secrets/engine_token }
+  webhook_secret:      { file: ./secrets/webhook_secret }
+  db_password:         { file: ./secrets/db_password }
+  mytax_storage_state: { file: ./secrets/mytax_storage_state.json }
+  n8n_key:             { file: ./secrets/n8n_key }
+  users_file:          { file: ./secrets/users.json }      # reviewers/checkers: hashes only (python -m stsds.users)
+  payment_token:       { file: ./secrets/payment_token }
+  signing_token:       { file: ./secrets/signing_token }
+
+services:
+  engine:
+    build: .
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    tmpfs: ["/tmp"]
+    env_file: .env
+    environment:
+      STSDS_ENGINE_TOKEN_FILE: /run/secrets/engine_token
+      STSDS_WEBHOOK_SECRET_FILE: /run/secrets/webhook_secret
+      RPA_STORAGE_STATE: /run/secrets/mytax_storage_state
+      STSDS_USERS_FILE: /run/secrets/users_file
+      PAYMENT_TOKEN_FILE: /run/secrets/payment_token
+      SIGNING_TOKEN_FILE: /run/secrets/signing_token
+      STSDS_LEDGER_PATH: /var/lib/stsds/ledger/ledger.jsonl
+    secrets: [engine_token, webhook_secret, mytax_storage_state, users_file, payment_token, signing_token]
+    # Reviewer console and API. Bound to localhost: put a TLS reverse proxy (with SSO or an IP
+    # allowlist and rate limiting) in front. RUN EXACTLY ONE REPLICA AND ONE WORKER: per-transaction
+    # locks and the ledger chain are in-process.
+    ports: ["127.0.0.1:8080:8080"]
+    volumes:
+      - staging:/var/lib/stsds/staging
+      - ledger:/var/lib/stsds/ledger
+      - ./rpa/selectors.json:/app/rpa/selectors.json:ro # calibrated during UAT
+    networks: [internal, egress]
+    depends_on: [postgres, ollama, qdrant]
+    deploy:
+      resources: { limits: { cpus: "2", memory: 4g } }
+
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:1.64.0
+    environment:
+      N8N_ENCRYPTION_KEY_FILE: /run/secrets/n8n_key
+      N8N_BLOCK_ENV_ACCESS_IN_NODE: "true"
+      N8N_DIAGNOSTICS_ENABLED: "false"
+      WEBHOOK_URL: ${N8N_PUBLIC_URL}
+    secrets: [n8n_key]
+    ports: ["127.0.0.1:5678:5678"] # front with a TLS reverse proxy / WAF
+    volumes: [n8n:/home/node/.n8n]
+    networks: [internal, egress]
+    depends_on: [engine]
+
+  ollama:
+    image: ollama/ollama:0.3.14
+    volumes: [ollama:/root/.ollama]
+    networks: [internal]
+
+  qdrant:
+    image: qdrant/qdrant:v1.11.3
+    volumes: [qdrant:/qdrant/storage]
+    networks: [internal]
+
+  postgres:
+    image: postgres:16.4
+    environment:
+      POSTGRES_DB: stsds
+      POSTGRES_USER: stsds_owner
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+    secrets: [db_password]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+    networks: [internal]
+
+volumes: { staging: {}, ledger: {}, n8n: {}, ollama: {}, qdrant: {}, pgdata: {} }

@@ -1,0 +1,60 @@
+{
+  "version": "2026.10-r1",
+  "effective_from": "2026-01-01",
+  "min_duty": "10.00",
+  "duplicate_copy_duty": "10.00",
+  "item_4": {
+    "duty": "10.00",
+    "wage_exemption_monthly": "3000.00"
+  },
+  "item_49": {
+    "unit_rm": 250,
+    "brackets": [
+      { "max_months": 12, "rate": 1 },
+      { "max_months": 36, "rate": 3 },
+      { "max_months": 60, "rate": 5 },
+      { "max_months": null, "rate": 7 }
+    ],
+    "indefinite_rate": 7
+  },
+  "item_22": {
+    "secured_unit_rm": 1000,
+    "secured_rate": 5
+  },
+  "item_32": {
+    "unit_rm": 100,
+    "citizen_tiers": [
+      { "upto": "100000", "rate": 1 },
+      { "upto": "500000", "rate": 2 },
+      { "upto": "1000000", "rate": 3 },
+      { "upto": null, "rate": 4 }
+    ],
+    "foreign_residential_rate": 8,
+    "foreign_other_rate": 4,
+    "foreign_residential_effective_from": "2026-01-01"
+  },
+  "phase_start": {
+    "ITEM_49_LEASE": "2026-01-01",
+    "ITEM_22_SECURITY": "2026-01-01",
+    "ITEM_4_EMPLOYMENT": "2026-01-01",
+    "ITEM_32A_MOT": "2027-01-01"
+  },
+  "signoff": null,
+  "notes": {
+    "item_49": "Rates per RM250 or part: RM1 (<=1yr), RM3 (>1-3yr), RM5 (>3-5yr), RM7 (>5yr or indefinite). The STSDS blueprint (STSDS-SDLC-2026-V1) states RM1/RM2/RM4; two secondary sources agree on RM1/RM3/RM5/RM7. Head of Tax must confirm against the gazetted First Schedule before sign-off.",
+    "item_49_boundary": "Exactly 36 months is treated as 'not exceeding 3 years' (RM3) and exactly 60 months as 'not exceeding 5 years' (RM5). Confirm with Head of Tax.",
+    "item_32": "Tier duty is RM per RM100 or part thereof, applied per tier (not a raw percentage). The blueprint's percentage formula under-assesses amounts that are not multiples of RM100.",
+    "item_32_foreign": "Non-citizen residential: RM8 per RM100 from 2026-01-01. Non-citizen non-residential: RM4 per RM100. Confirm with Head of Tax.",
+    "item_22": "Only secured loans at 0.5% (RM5 per RM1,000 or part) are computed automatically. Other loan or security types are routed to review.",
+    "item_4": "Wage exemption of RM3,000/month reported by PwC Malaysia Tax Booklet; KPMG (Dec 2025) described it as a Finance Bill proposal. Confirm enactment before sign-off.",
+    "duplicate_copy_duty": "RM10 per duplicate copy is stated only in the blueprint and is unverified.",
+    "min_duty": "RM10 minimum duty under Section 36CB (corroborated by two secondary sources)."
+  },
+  "sources": [
+    { "name": "STSDS-SDLC-2026-V1 blueprint", "ref": "Section 5 statutory table" },
+    { "name": "PwC Malaysia Tax Booklet 2025/2026, Stamp Duty", "ref": "https://www.pwc.com/my/en/publications/mtb/stamp-duty.html" },
+    { "name": "StashAway Malaysia tenancy stamp duty guide", "ref": "https://www.stashaway.my/r/stamp-duty-tenancy-agreement-malaysia" },
+    { "name": "PropCashflow tenancy stamp duty calculator", "ref": "https://propcashflow.my/tools/stamp-duty-tenancy-calculator/" },
+    { "name": "KPMG Malaysia, Stamp duty self-assessment era (Dec 2025)", "ref": "https://assets.kpmg.com/content/dam/kpmgsites/my/pdf/2025/12/stamp-duty-in-malaysia-are-you-ready-for-the-self-assessment-era.pdf.coredownload.inline.pdf" }
+  ]
+}
