@@ -28,7 +28,7 @@ button:focus-visible,.btn:focus-visible{outline:3px solid #1B6FD1;outline-offset
 <main>
   <header><p class="eyebrow">RYDETECH GLOBAL ENTERPRISE</p><h1>STSDS live demo</h1>
   <p style="color:var(--mute);margin-top:8px">Upload, score, review, approve, pay, stamp and verify an e-Duti Setem filing, end to end.</p></header>
-  <p class="warn"><b>Simulated.</b> MyTax, the payment gateway and the vault are simulated. Nothing is filed or paid, and the sample data is fictional. The first load can take about 30 seconds while the demo server wakes up.</p>
+  <p class="warn"><b>Simulated.</b> MyTax, the payment gateway and the vault are simulated. Nothing is filed or paid, and the sample data is fictional.</p>
   <section class="card" aria-labelledby="s1"><h2 id="s1">1. Load a sample batch</h2>
     <p>Six mixed contracts: clean ones are filed automatically, a poor scan waits for a reviewer, a RM 25,000 loan waits for a second approver, plus a duplicate and a corrupt file.</p>
     <div class="row" style="margin-top:12px"><button class="primary" id="seed" type="button">Load sample batch</button></div><p id="msg" role="status" aria-live="polite"></p></section>
@@ -42,7 +42,8 @@ button:focus-visible,.btn:focus-visible{outline:3px solid #1B6FD1;outline-offset
     <ol><li>Each document has a confidence score. 0.95 or more runs on its own.</li>
     <li>Anything lower stops for a person, and every human edit forces a second approver.</li>
     <li>Every filing is checked against the official calculation to the sen before it is paid.</li>
-    <li>After stamping, nine final checks run before the case is marked complete.</li></ol></section>
+    <li>After stamping, nine final checks run before the case is marked complete.</li>
+    <li>In the console, open <b>Dashboard</b> for compliance rate, alerts, penalty exposure (estimate) and the monthly review, and <b>Contract register</b> to search, add or import contracts. The register includes fictional sample contracts that are overdue, due soon or expiring.</li></ol></section>
 </main>
 <script>
 (function(){"use strict";
