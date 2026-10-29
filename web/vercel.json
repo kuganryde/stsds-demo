@@ -1,9 +1,9 @@
 {
   "rewrites": [
-    { "source": "/console", "destination": "https://RENDER_HOST/console" },
-    { "source": "/console/:path*", "destination": "https://RENDER_HOST/console/:path*" },
-    { "source": "/v1/:path*", "destination": "https://RENDER_HOST/v1/:path*" },
-    { "source": "/demo/:path*", "destination": "https://RENDER_HOST/demo/:path*" }
+    { "source": "/console", "destination": "https://stsds-demo.onrender.com/console" },
+    { "source": "/console/:path*", "destination": "https://stsds-demo.onrender.com/console/:path*" },
+    { "source": "/v1/:path*", "destination": "https://stsds-demo.onrender.com/v1/:path*" },
+    { "source": "/demo/:path*", "destination": "https://stsds-demo.onrender.com/demo/:path*" }
   ],
   "headers": [
     { "source": "/(.*)", "headers": [
