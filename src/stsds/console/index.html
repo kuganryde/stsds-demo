@@ -3,111 +3,49 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>STSDS Review Console</title>
+  <title>STSDS Console</title>
   <link rel="stylesheet" href="/console/app.css">
 </head>
 <body>
   <a class="skip" href="#main">Skip to content</a>
-  <header>
-    <h1>STSDS Review Console</h1>
-    <p class="sub">RYDETECH GLOBAL ENTERPRISE · human-in-the-loop for stamp duty filings</p>
-  </header>
 
-  <main id="main">
-    <section aria-labelledby="auth-h" class="card">
-      <h2 id="auth-h">Sign in</h2>
+  <div id="signin-view" class="center">
+    <section class="card narrow" aria-labelledby="auth-h">
+      <p class="eyebrow">e-Duti Setem automation</p>
+      <h1 id="auth-h">STSDS Console</h1>
       <p class="hint">Paste your personal access token. It stays in this page's memory only and is gone when you close or reload the tab.</p>
-      <div class="row">
+      <div class="stack">
         <label for="token">Access token</label>
         <input id="token" type="password" autocomplete="off" spellcheck="false">
-        <button id="signin" type="button">Load my queue</button>
+        <button id="signin" type="button" class="primary">Sign in</button>
       </div>
-      <p id="status" role="status" aria-live="polite"></p>
+      <p id="signin-status" class="status" role="status" aria-live="polite"></p>
+      <p class="hint">RYDETECH GLOBAL ENTERPRISE · human-in-the-loop for stamp duty filings</p>
     </section>
+  </div>
 
-    <div class="tabs" role="group" aria-label="Sections">
-      <button type="button" class="tab" data-tab="work" aria-pressed="true">Work queue</button>
-      <button type="button" class="tab" data-tab="dashboard" aria-pressed="false">Dashboard</button>
-      <button type="button" class="tab" data-tab="clients" aria-pressed="false">Clients</button>
-      <button type="button" class="tab" data-tab="register" aria-pressed="false">Contract register</button>
-    </div>
+  <div id="app" class="shell" hidden>
+    <nav aria-label="Main">
+      <div class="brand"><div class="brand-name">STSDS</div><div class="brand-sub">e-Duti Setem automation</div></div>
+      <button type="button" class="nav" data-page="clients" hidden><span>Clients</span><span class="badge" id="badge-clients" hidden></span></button>
+      <button type="button" class="nav" data-page="batches" hidden><span>Batches</span><span class="badge" id="badge-batches" hidden></span></button>
+      <button type="button" class="nav" data-page="signing" hidden><span>Signing</span><span class="badge" id="badge-signing" hidden></span></button>
+      <button type="button" class="nav" data-page="review" hidden><span>Review queue</span><span class="badge" id="badge-review" hidden></span></button>
+      <button type="button" class="nav" data-page="approvals" hidden><span>Approvals</span><span class="badge" id="badge-approvals" hidden></span></button>
+      <button type="button" class="nav" data-page="exceptions" hidden><span>Exceptions</span><span class="badge" id="badge-exceptions" hidden></span></button>
+      <button type="button" class="nav" data-page="dashboard" hidden><span>Compliance dashboard</span><span class="badge" id="badge-dashboard" hidden></span></button>
+      <button type="button" class="nav" data-page="register" hidden><span>Contract register</span><span class="badge" id="badge-register" hidden></span></button>
+      <button type="button" class="nav" data-page="ledger" hidden><span>Ledger and audit</span><span class="badge" id="badge-ledger" hidden></span></button>
+      <div class="grow"></div>
+      <div class="who" id="who"></div>
+      <button type="button" id="signout" class="nav">Sign out</button>
+    </nav>
 
-    <div id="tab-work">
-    <section aria-labelledby="batch-h" class="card">
-      <h2 id="batch-h">Submit documents</h2>
-      <p class="hint">Choose several PDFs. Each is validated and scored on its own: high-confidence documents are processed automatically, the rest appear in the queue below.</p>
-      <div class="row">
-        <label for="files">PDF files</label>
-        <input id="files" type="file" accept="application/pdf" multiple>
-        <button id="upload" type="button">Submit batch</button>
-      </div>
-      <div id="batch-result"></div>
-    </section>
+    <main id="main">
+      <p id="status" class="status" role="status" aria-live="polite"></p>
 
-    <section aria-labelledby="queue-h" class="card">
-      <h2 id="queue-h">Waiting for a person</h2>
-      <div class="table-wrap">
-        <table>
-          <caption class="sr">Documents waiting for review or approval, lowest score first</caption>
-          <thead><tr><th scope="col">Document</th><th scope="col">State</th><th scope="col">Score</th><th scope="col">Duty (RM)</th><th scope="col">Why</th><th scope="col"><span class="sr">Action</span></th></tr></thead>
-          <tbody id="queue"></tbody>
-        </table>
-      </div>
-    </section>
-
-    <section id="detail" class="card" hidden aria-labelledby="detail-h" tabindex="-1">
-      <h2 id="detail-h">Document</h2>
-      <div id="meta"></div>
-      <div class="grid">
-        <div>
-          <h3>Extracted by the model</h3>
-          <label for="extraction" class="sr">Extraction (JSON). Edit any wrong value.</label>
-          <textarea id="extraction" rows="18" spellcheck="false"></textarea>
-          <p class="hint">Edit only what is wrong. A changed filing needs a second person to approve before it is submitted.</p>
-        </div>
-        <div>
-          <h3>Text read from the document</h3>
-          <pre id="doctext" tabindex="0"></pre>
-          <button id="viewpdf" type="button" class="secondary">Open the original PDF in a new tab</button>
-        </div>
-      </div>
-      <fieldset id="review-actions">
-        <legend>Your decision</legend>
-        <label class="check"><input id="attest" type="checkbox"> I checked every figure, date and party against the original document.</label>
-        <label for="note">Note (optional)</label>
-        <input id="note" type="text" maxlength="300">
-        <div class="row">
-          <button id="approve" type="button">Approve and continue</button>
-          <button id="reject" type="button" class="danger">Reject</button>
-        </div>
-      </fieldset>
-      <fieldset id="checker-actions" hidden>
-        <legend>Second approval</legend>
-        <p id="checker-note"></p>
-        <div class="row"><button id="approve-filing" type="button">Approve this filing</button></div>
-      </fieldset>
-    </section>
-    </div>
-
-    <div id="tab-dashboard" hidden>
-      <section class="card" aria-labelledby="dash-h">
-        <h2 id="dash-h">Compliance dashboard</h2>
-        <p class="hint">Live from the contract register. Penalty figures are estimates for planning only; nothing here files or pays.</p>
-        <div id="tiles" class="tiles"></div>
-        <div class="row"><button id="dash-refresh" type="button" class="secondary">Refresh</button>
-          <label for="rep-month" class="sr">Report month</label><input id="rep-month" type="text" placeholder="YYYY-MM" maxlength="7" size="9">
-          <button id="rep-run" type="button" class="secondary">Monthly review</button></div>
-        <p id="rep-out" class="hint"></p>
-      </section>
-      <section class="card" aria-labelledby="alerts-h">
-        <h2 id="alerts-h">Alerts</h2>
-        <div class="table-wrap"><table><caption class="sr">Compliance alerts, most urgent first</caption>
-          <thead><tr><th scope="col">Level</th><th scope="col">Contract</th><th scope="col">Entity</th><th scope="col">Date</th><th scope="col">Detail</th></tr></thead>
-          <tbody id="alerts"></tbody></table></div>
-      </section>
-    </div>
-
-    <div id="tab-clients" hidden>
+      <div id="page-clients" class="page" hidden>
+        <header class="page-head"><p class="eyebrow">Step 0 of the process</p><h1>Clients</h1><p class="sub">Register each client company and TMF's authority before any document is stamped. A second person approves every record.</p></header>
       <section class="card" aria-labelledby="pend-h">
         <h2 id="pend-h">Waiting for a client</h2>
         <p class="hint">Documents are held when none of their parties is an approved client. Choose a party to start the registration; the documents are released automatically once a second person approves it.</p>
@@ -139,14 +77,14 @@
           <label for="c-id" class="sr">ID number</label><input id="c-id" type="text" placeholder="BRN / NRIC" maxlength="30">
           <label for="c-tin" class="sr">TIN</label><input id="c-tin" type="text" placeholder="TIN (e.g. C1234567890)" maxlength="20">
         </div>
-        <div class="row" style="margin-top:8px">
+        <div class="row">
           <label for="c-rm" class="sr">Relationship manager</label><input id="c-rm" type="text" placeholder="TMF relationship manager" maxlength="120">
           <label for="c-owner" class="sr">Default contract owner</label><input id="c-owner" type="text" placeholder="Default contract owner" maxlength="200">
           <label for="c-auth" class="sr">Authority reference</label><input id="c-auth" type="text" placeholder="Engagement letter / PoA ref" maxlength="120">
           <label for="c-until" class="sr">Authority valid until</label><input id="c-until" type="text" placeholder="Valid until (YYYY-MM-DD)" maxlength="10">
-          <label for="c-limit" class="sr">Approval limit</label><input id="c-limit" type="text" placeholder="Checker needed from RM" maxlength="16">
+          <label for="c-limit" class="sr">Approval limit</label><input id="c-limit" type="text" placeholder="Approval limit RM (checker needed at or above)" maxlength="16">
         </div>
-        <div class="row" style="margin-top:8px">
+        <div class="row">
           <label for="c-addr" class="sr">Registered address</label><input id="c-addr" type="text" placeholder="Registered address" maxlength="400">
           <label for="c-contact" class="sr">Contact name</label><input id="c-contact" type="text" placeholder="Contact name" maxlength="120">
           <label for="c-crole" class="sr">Contact role</label><input id="c-crole" type="text" placeholder="Contact role" maxlength="80">
@@ -155,9 +93,141 @@
           <button id="c-cancel" type="button" class="secondary" hidden>Cancel edit</button>
         </div>
       </section>
-    </div>
+      </div>
 
-    <div id="tab-register" hidden>
+      <div id="page-batches" class="page" hidden>
+        <header class="page-head"><p class="eyebrow">Steps 2 to 11</p><h1>Batches</h1><p class="sub">Each document is validated and scored on its own. High-confidence documents are processed automatically; the rest wait for a person.</p></header>
+        <section class="card" aria-labelledby="batch-h" id="upload-card">
+          <h2 id="batch-h">Submit documents</h2>
+          <p class="hint" id="upload-hint">Choose several PDFs. Documents for a company that is not an approved client are held until it is registered.</p>
+          <div class="row">
+            <label for="files">PDF files</label>
+            <input id="files" type="file" accept="application/pdf" multiple>
+            <button id="upload" type="button" class="primary">Submit batch</button>
+          </div>
+        </section>
+        <section class="card" aria-labelledby="batches-h">
+          <div class="row spread"><h2 id="batches-h">Recent batches</h2><button id="batches-refresh" type="button" class="secondary">Refresh</button></div>
+          <div class="table-wrap"><table><caption class="sr">Recent batches, newest first</caption>
+            <thead><tr><th scope="col">Batch</th><th scope="col">Created</th><th scope="col">Documents</th><th scope="col">Complete</th><th scope="col">Waiting for a person</th><th scope="col">Stopped</th><th scope="col"><span class="sr">Action</span></th></tr></thead>
+            <tbody id="batches"></tbody></table></div>
+        </section>
+        <section class="card" id="batch-detail" aria-labelledby="bd-h" hidden>
+          <h2 id="bd-h">Batch</h2>
+          <div id="batch-tiles" class="tiles"></div>
+          <div class="table-wrap"><table><caption class="sr">Documents in the batch, lowest score first</caption>
+            <thead><tr><th scope="col">Document</th><th scope="col">Instrument</th><th scope="col">Duty (RM)</th><th scope="col">Score</th><th scope="col">Status</th><th scope="col"><span class="sr">Action</span></th></tr></thead>
+            <tbody id="batch-docs"></tbody></table></div>
+        </section>
+      </div>
+
+      <div id="page-signing" class="page" hidden>
+        <header class="page-head"><p class="eyebrow">Step 1 of the process</p><h1>Signing</h1><p class="sub">Send a document for e-signature. When everyone has signed, the signed PDF comes back into the pipeline by itself.</p></header>
+        <section class="card" aria-labelledby="sg-h">
+          <h2 id="sg-h">Send for signature</h2>
+          <div class="row"><label for="sg-file">PDF</label><input id="sg-file" type="file" accept="application/pdf"></div>
+          <div class="row"><label for="sg-name" class="sr">Document name</label><input id="sg-name" type="text" placeholder="Document name" maxlength="120"></div>
+          <div id="sg-signers"></div>
+          <div class="row"><button id="sg-add" type="button" class="secondary">Add a signer</button><button id="sg-send" type="button" class="primary">Send for signature</button></div>
+          <p class="hint">Emails go to the signing service only. STSDS keeps signer names, never email addresses. Sending needs the operator service token.</p>
+        </section>
+        <section class="card" aria-labelledby="sg-list-h">
+          <div class="row spread"><h2 id="sg-list-h">Documents out for signature</h2><button id="sg-refresh" type="button" class="secondary">Refresh</button></div>
+          <div class="table-wrap"><table><caption class="sr">Signing requests, newest first</caption>
+            <thead><tr><th scope="col">Document</th><th scope="col">Signed</th><th scope="col">Status</th><th scope="col"><span class="sr">Action</span></th></tr></thead>
+            <tbody id="sg-rows"></tbody></table></div>
+          <p class="hint">A PDF with no signature, or one edited after it was signed, is held at intake and can only be rejected. The check confirms signatures are present and cover the whole file; the signing service validates certificates.</p>
+        </section>
+      </div>
+
+      <div id="page-review" class="page" hidden>
+        <header class="page-head"><p class="eyebrow">Human checkpoint</p><h1>Review queue</h1><p class="sub">Documents the model was not sure about. Check the facts against the original, correct what is wrong and attest. The duty is always recalculated by the rules engine.</p></header>
+        <section class="card"><div class="table-wrap"><table><caption class="sr">Documents waiting for review, lowest score first</caption>
+          <thead><tr><th scope="col">Document</th><th scope="col">Score</th><th scope="col">Duty (RM)</th><th scope="col">Why</th><th scope="col"><span class="sr">Action</span></th></tr></thead>
+          <tbody id="q-review"></tbody></table></div></section>
+      </div>
+
+      <div id="page-approvals" class="page" hidden>
+        <header class="page-head"><p class="eyebrow">Human checkpoint</p><h1>Second approval</h1><p class="sub">Needed when a reviewer changed a fact, when the duty is above the single-approver limit, or when a client's own limit is reached. You must be a different person from the reviewer.</p></header>
+        <section class="card" aria-label="Four-eyes rule"><ol class="steps"><li><b>1</b> Reviewer edits and attests</li><li><b>2</b> A different checker compares the changes</li><li><b>3</b> The app files, pays and stamps</li></ol></section>
+        <section class="card"><div class="table-wrap"><table><caption class="sr">Filings waiting for a second approval</caption>
+          <thead><tr><th scope="col">Document</th><th scope="col">Reviewed by</th><th scope="col">Duty (RM)</th><th scope="col">Why a checker</th><th scope="col"><span class="sr">Action</span></th></tr></thead>
+          <tbody id="q-approvals"></tbody></table></div></section>
+      </div>
+
+      <div id="page-exceptions" class="page" hidden>
+        <header class="page-head"><p class="eyebrow">The app stops instead of guessing</p><h1>Exceptions and holds</h1><p class="sub">Nothing here moves until a named person decides. Money is never retried by the app on its own.</p></header>
+        <div id="exceptions"></div>
+      </div>
+
+      <div id="page-detail" class="page" hidden>
+        <p><button type="button" class="link" id="detail-back">Back</button></p>
+    <section id="detail" class="card" aria-labelledby="detail-h" tabindex="-1">
+      <h2 id="detail-h">Document</h2>
+      <div id="meta"></div>
+      <div class="grid">
+        <div>
+          <h3>Extracted by the model</h3>
+          <label for="extraction" class="sr">Extraction (JSON). Edit any wrong value.</label>
+          <textarea id="extraction" rows="18" spellcheck="false"></textarea>
+          <p class="hint">Edit only what is wrong. A changed filing needs a second person to approve before it is submitted.</p>
+        </div>
+        <div>
+          <h3>Text read from the document</h3>
+          <pre id="doctext" tabindex="0"></pre>
+          <button id="viewpdf" type="button" class="secondary">Open the original PDF in a new tab</button>
+        </div>
+      </div>
+      <fieldset id="review-actions">
+        <legend>Your decision</legend>
+        <label class="check"><input id="attest" type="checkbox"> I checked every figure, date and party against the original document.</label>
+        <label for="note">Note (optional)</label>
+        <input id="note" type="text" maxlength="300">
+        <div class="row">
+          <button id="approve" type="button">Approve and continue</button>
+          <button id="reject" type="button" class="danger">Reject</button>
+        </div>
+      </fieldset>
+      <fieldset id="checker-actions" hidden>
+        <legend>Second approval</legend>
+        <p id="checker-note"></p>
+        <div class="row"><button id="approve-filing" type="button">Approve this filing</button></div>
+      </fieldset>
+    </section>
+
+      </div>
+
+      <div id="page-proof" class="page" hidden>
+        <p><button type="button" class="link" id="proof-back">Back</button></p>
+        <header class="page-head"><h1 id="proof-title">Transaction</h1><p class="sub" id="proof-sub"></p></header>
+        <div class="two">
+          <section class="card" aria-labelledby="tl-h"><h2 id="tl-h">What happened, step by step</h2><ol id="timeline" class="timeline"></ol></section>
+          <section class="card" aria-labelledby="ck-h"><h2 id="ck-h">Final checks</h2><div id="checks"></div>
+            <h3>Kept for 7 years</h3><p class="hint" id="vault"></p></section>
+        </div>
+      </div>
+
+      <div id="page-dashboard" class="page" hidden>
+        <header class="page-head"><p class="eyebrow">Monitoring</p><h1>Compliance dashboard</h1></header>
+      <section class="card" aria-labelledby="dash-h">
+        <h2 id="dash-h">Compliance dashboard</h2>
+        <p class="hint">Live from the contract register. Penalty figures are estimates for planning only; nothing here files or pays.</p>
+        <div id="tiles" class="tiles"></div>
+        <div class="row"><button id="dash-refresh" type="button" class="secondary">Refresh</button>
+          <label for="rep-month" class="sr">Report month</label><input id="rep-month" type="text" placeholder="YYYY-MM" maxlength="7" size="9">
+          <button id="rep-run" type="button" class="secondary">Monthly review</button></div>
+        <p id="rep-out" class="hint"></p>
+      </section>
+      <section class="card" aria-labelledby="alerts-h">
+        <h2 id="alerts-h">Alerts</h2>
+        <div class="table-wrap"><table><caption class="sr">Compliance alerts, most urgent first</caption>
+          <thead><tr><th scope="col">Level</th><th scope="col">Contract</th><th scope="col">Entity</th><th scope="col">Date</th><th scope="col">Detail</th></tr></thead>
+          <tbody id="alerts"></tbody></table></div>
+      </section>
+      </div>
+
+      <div id="page-register" class="page" hidden>
+        <header class="page-head"><p class="eyebrow">Central repository</p><h1>Contract register</h1><p class="sub">Contracts filed through STSDS appear here by themselves; contracts stamped elsewhere can be added or imported. Every edit records who made it and when.</p></header>
       <section class="card" aria-labelledby="reg-h">
         <h2 id="reg-h">Contract register</h2>
         <div class="row">
@@ -180,7 +250,7 @@
           <label for="a-kind" class="sr">Type</label>
           <select id="a-kind"><option>EMPLOYMENT</option><option>SERVICE</option><option>INTERCOMPANY</option><option>LOAN</option><option>SHAREHOLDER</option><option>SHARE_TRANSFER</option><option>TENANCY</option><option>SECURITY</option><option>COMMERCIAL</option><option>OTHER</option></select>
         </div>
-        <div class="row" style="margin-top:8px">
+        <div class="row">
           <label for="a-exec" class="sr">Execution date</label><input id="a-exec" type="text" placeholder="Executed (YYYY-MM-DD)" maxlength="10">
           <label for="a-duty" class="sr">Duty paid</label><input id="a-duty" type="text" placeholder="Duty RM (if known)" maxlength="16">
           <label for="a-owner" class="sr">Contract owner</label><input id="a-owner" type="text" placeholder="Contract owner" maxlength="200">
@@ -188,11 +258,22 @@
           <label for="a-cert" class="sr">Certificate reference</label><input id="a-cert" type="text" placeholder="Certificate ref (if stamped)" maxlength="120">
           <button id="a-add" type="button">Add to register</button>
         </div>
-        <div class="row" style="margin-top:12px"><label for="a-file">Or import a CSV</label><input id="a-file" type="file" accept=".csv,text/csv"><button id="a-import" type="button" class="secondary">Import</button></div>
+        <div class="row"><label for="a-file">Or import a CSV</label><input id="a-file" type="file" accept=".csv,text/csv"><button id="a-import" type="button" class="secondary">Import</button></div>
         <p class="hint">CSV columns: name, entity, doc_kind, execution_date, and optionally counterparty, duty_rm, contract_owner, certificate_ref, stamped_on, renewal_date, expiry_date, not_required, notes.</p>
       </section>
-    </div>
-  </main>
+      </div>
+
+      <div id="page-ledger" class="page" hidden>
+        <header class="page-head"><p class="eyebrow">Audit</p><h1>Ledger and audit</h1><p class="sub">Every transaction event, in order, chained so that edits or deletions show up.</p></header>
+        <section class="card"><div id="ledger-tiles" class="tiles"></div>
+          <div class="row"><label for="lg-q" class="sr">Search</label><input id="lg-q" type="text" placeholder="Search transaction, document or person" maxlength="100"><button id="lg-go" type="button" class="secondary">Search</button><button id="lg-csv" type="button" class="secondary">Export CSV (spreadsheet-safe)</button></div>
+          <div class="table-wrap"><table><caption class="sr">Ledger entries, newest first</caption>
+            <thead><tr><th scope="col">Time</th><th scope="col">Document</th><th scope="col">Stage</th><th scope="col">Outcome</th><th scope="col">By</th><th scope="col">Entry hash</th></tr></thead>
+            <tbody id="ledger"></tbody></table></div>
+          <p class="hint" id="lg-note"></p></section>
+      </div>
+    </main>
+  </div>
   <script src="/console/app.js"></script>
 </body>
 </html>

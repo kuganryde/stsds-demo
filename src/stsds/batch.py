@@ -80,6 +80,18 @@ class BatchService:
             raise GateFailure("BATCH_UNKNOWN", "Unknown batch", "HALT")
         return Batch.model_validate_json(path.read_text())
 
+    def recent(self, limit: int = 30) -> list[dict[str, Any]]:
+        """Newest batches first, as short summaries (no per-document rows)."""
+        files = sorted(self.root.glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True)[:limit]
+        out: list[dict[str, Any]] = []
+        for path in files:
+            try:
+                s = self.summary(path.stem)
+            except (GateFailure, ValueError):
+                continue  # a damaged file must not hide the others
+            out.append({k: s[k] for k in ("batch_id", "status", "created_at", "created_by", "counts", "totals")})
+        return out
+
     # -- intake ----------------------------------------------------------------------------------
     async def create(
         self, created_by: str, source: str, documents: list[tuple[str, bytes | None]],

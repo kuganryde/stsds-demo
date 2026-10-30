@@ -247,6 +247,44 @@ def create_app(
         }
 
     # ---- batches -----------------------------------------------------------------------------
+    @app.get("/v1/me")
+    def me(who: Identity = Depends(principal("operator", "reviewer", "checker"))) -> dict[str, Any]:
+        """Who is signed in and what this deployment offers, so the console shows only what works."""
+        return {
+            "name": who.name, "roles": sorted(who.roles), "mode": settings.mode, "version": __version__,
+            "rules": pipeline.rules.version, "client_required": settings.require_registered_client,
+            "features": {"signing": signer is not None, "ledger": pipeline.ledger is not None},
+            "threshold": settings.auto_threshold, "payment_cap_rm": str(settings.batch_payment_cap_rm),
+        }
+
+    @app.get("/v1/batches")
+    def batch_list(_who: Identity = Depends(principal("operator", "reviewer", "checker"))) -> dict[str, Any]:
+        return {"items": batches.recent()}
+
+    @app.get("/v1/transactions/{txn_id}")
+    def transaction_proof(
+        txn_id: str, _who: Identity = Depends(principal("operator", "reviewer", "checker"))
+    ) -> dict[str, Any]:
+        """Everything that happened to one document, for the proof page. Names and amounts only."""
+        ctx = pipeline.store.load(txn(txn_id))
+        if ctx is None:
+            raise HTTPException(404, "unknown transaction")
+        extraction = ctx.classification or ctx.candidate
+        v = ctx.vault or {}
+        return {
+            "txn_id": ctx.txn_id, "name": ctx.name, "state": ctx.state, "batch_id": ctx.batch_id,
+            "client": ctx.client_name, "item": extraction.first_schedule_item.value if extraction else None,
+            "duty_rm": str(ctx.calc.total_duty_rm) if ctx.calc else None,
+            "lhdn_total_rm": str(ctx.lhdn_total) if ctx.lhdn_total is not None else None,
+            "score": ctx.assessment.score if ctx.assessment else None,
+            "reviewed_by": ctx.reviewed_by, "approved_by": ctx.approved_by, "bill_no": ctx.bill_no,
+            "payment_reference": (ctx.payment or {}).get("reference"),
+            "verification": ctx.verification,
+            "vault": {k: v.get(k) for k in ("bundle_sha256", "sijil_sha256", "retain_until")} if v else None,
+            "timeline": pipeline.ledger.rows(txn_id=ctx.txn_id) if pipeline.ledger is not None else [],
+            "ledger_chain_valid": pipeline.ledger.verify() if pipeline.ledger is not None else None,
+        }
+
     @app.post("/v1/batches")
     async def create_batch(
         body: BatchBody, background: BackgroundTasks, who: Identity = Depends(principal("operator"))
@@ -374,7 +412,9 @@ def create_app(
             res = await pipeline.reconcile_payment(txn(txn_id), who.name)
         except GateFailure as exc:
             raise HTTPException(409, {"code": exc.code, "message": exc.message}) from exc
-        if res.ok and res.state == "PAID":
+        if res.ok and res.state in {"PAID", "SUBMITTED"}:
+            # PAID goes on to the stamp. SUBMITTED (provider says unpaid) is advanced once so it parks at
+            # PAYMENT_RETRY_NEEDS_APPROVAL, where a checker can see it; it never pays without a named approver.
             res = await orchestrator.advance(txn_id)
         return guarded(res)
 
@@ -411,6 +451,10 @@ def create_app(
             except GateFailure as exc:
                 raise HTTPException(422, {"code": exc.code, "message": exc.message}) from exc
             return rec.public()
+
+        @app.get("/v1/signing")
+        def signing_list(_who: Identity = Depends(principal("operator", "reviewer", "checker"))) -> dict[str, Any]:
+            return {"items": signing.recent()}
 
         @app.get("/v1/signing/{envelope_id}")
         def signing_get(

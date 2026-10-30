@@ -518,9 +518,14 @@ class Pipeline:
         items: list[dict[str, Any]] = []
         for txn_id in self.store.list_ids():
             ctx = self.store.load(txn_id)
-            if ctx is None or ctx.state not in waiting:
+            if ctx is None:
                 continue
             halt = ctx.last_halt or {}
+            # A bill whose payment was refused, or whose retry needs a named approver, is parked in SUBMITTED.
+            # Without this it would be invisible to every checker.
+            parked = ctx.state == "SUBMITTED" and halt.get("code") in {"PAYMENT_RETRY_NEEDS_APPROVAL", "PAYMENT_REJECTED"}
+            if ctx.state not in waiting and not parked:
+                continue
             items.append({
                 "txn_id": txn_id, "state": ctx.state, "batch_id": ctx.batch_id, "name": ctx.name,
                 "code": (ctx.review.code if ctx.review else halt.get("code", "")),

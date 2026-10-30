@@ -172,6 +172,16 @@ class SigningService:
         except (OSError, ValueError, TypeError) as exc:
             raise GateFailure("ENVELOPE_UNKNOWN", "Unknown signing envelope", "HALT") from exc
 
+    def recent(self, limit: int = 50) -> list[dict[str, Any]]:
+        files = sorted(self._root.glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True)[:limit]
+        out: list[dict[str, Any]] = []
+        for path in files:
+            try:
+                out.append(self.get(path.stem).public())
+            except (GateFailure, ValueError, OSError):
+                continue
+        return out
+
     async def request(self, pdf: bytes, name: str, signers: list[Signer], requested_by: str) -> SigningRecord:
         check_pdf(pdf)
         if not 1 <= len(signers) <= MAX_SIGNERS:

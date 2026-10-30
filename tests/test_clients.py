@@ -462,6 +462,6 @@ def test_onboarding_a_client_releases_the_held_batch_by_itself(api):
 def test_console_has_the_clients_tab_and_stays_free_of_inline_script(api):
     c, _ = api
     html = c.get("/console").text
-    assert 'data-tab="clients"' in html and 'id="tab-clients"' in html and "<script>" not in html
+    assert ('data-page="clients"' in html and 'id="page-clients"' in html and "<script>" not in html and " style=" not in html)
     js = c.get("/console/app.js").text
     assert "innerHTML" not in js and "/v1/clients" in js and "eval(" not in js
