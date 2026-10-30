@@ -283,10 +283,10 @@ class Register:
             names = [p.name for p in c.parties]
             out.append(self._build(
                 eid=ctx.txn_id, source="pipeline", txn_id=ctx.txn_id, name=ctx.name or ctx.txn_id[:8],
-                entity=o.get("entity") or (names[0] if names else "Unknown"),
+                entity=o.get("entity") or ctx.client_name or (names[0] if names else "Unknown"),
                 counterparty=names[1] if len(names) > 1 else None,
                 kind=c.document_kind or _KIND_FOR_ITEM[c.first_schedule_item],
-                owner=o.get("contract_owner") or c.contract_owner, executed=c.execution_date, deadline=deadline,
+                owner=o.get("contract_owner") or c.contract_owner or ctx.client_owner, executed=c.execution_date, deadline=deadline,
                 duty=ctx.calc.total_duty_rm if ctx.calc else None, stamped=stamped, stamped_on=ctx.stamped_on,
                 cert=(ctx.vault or {}).get("sijil_sha256", "")[:16] or None,
                 renewal=dt.date.fromisoformat(o["renewal_date"]) if o.get("renewal_date") else None,

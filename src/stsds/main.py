@@ -11,6 +11,7 @@ from fastapi import FastAPI
 from .api import create_app
 from .audit import MemoryAuditStore, PostgresAuditStore
 from .classifier import OllamaClassifier
+from .clients import ClientDirectory
 from .gates import HttpTinVerifier
 from .ledger import Ledger
 from .notify import NullNotifier, TelegramNotifier
@@ -53,6 +54,7 @@ def build() -> tuple[Pipeline, Settings]:
         store=StagingStore(staging),
         payments=HttpPaymentProvider(s.payment_url, s.payment_token),
         ledger=Ledger(s.ledger_path),
+        clients=ClientDirectory(staging / "clients.sqlite3"),
         notifier=(
             TelegramNotifier(s.telegram_bot_token, s.telegram_chat_id)
             if s.telegram_bot_token and s.telegram_chat_id

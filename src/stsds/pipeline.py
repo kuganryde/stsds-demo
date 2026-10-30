@@ -31,6 +31,7 @@ from pydantic import BaseModel
 from . import engine
 from .audit import AuditStore, verify_chain
 from .classifier import Classifier
+from .clients import CLIENT_HOLD_CODES, ClientDirectory, client_gate
 from .gates import (
     GateFailure,
     TinVerifier,
@@ -65,7 +66,7 @@ from .vault import Vault
 RESOLVABLE_CODES = frozenset({
     "LOW_CONFIDENCE", "LOW_SCORE", "UNGROUNDED_FIGURE", "CLASSIFIER_SCHEMA",
     "TIN_FORMAT", "NRIC_INVALID", "BRN_INVALID", "PASSPORT_INVALID", "TIN_REJECTED",
-    "MONEY_PRECISION", "MISSING_WAGE", "MISSING_RENT", "MISSING_TERM", "MISSING_PRINCIPAL",
+    "CLIENT_DETAILS_MISMATCH", "MONEY_PRECISION", "MISSING_WAGE", "MISSING_RENT", "MISSING_TERM", "MISSING_PRINCIPAL",
     "MISSING_VALUE", "RESIDENTIAL_FLAG", "SECURITY_KIND", "RATE_WINDOW", "RULE_WINDOW",
 })
 TERMINAL_STATES = frozenset({"COMPLETE", "REJECTED", "HALTED"})
@@ -108,6 +109,9 @@ class TxnContext(BaseModel):
     qr: dict[str, str] | None = None
     signatures: int | None = None
     stamped_on: dt.date | None = None
+    client_id: str | None = None  # the registered TMF client this document belongs to
+    client_name: str | None = None
+    client_owner: str | None = None  # the client's default contract owner
 
 
 class StageResult(BaseModel):
@@ -271,11 +275,12 @@ class Pipeline:
         today: Any = None,
         payments: PaymentPort | None = None,
         ledger: Ledger | None = None,
+        clients: ClientDirectory | None = None,
     ) -> None:
         self.s, self.rules, self.rules_sha = settings, rules, rules_sha256
         self.extractor, self.classifier, self.verifier = extractor, classifier, verifier
         self.rpa, self.vault, self.audit, self.store, self.notifier = rpa, vault, audit, store, notifier
-        self.payments, self.ledger = payments, ledger
+        self.payments, self.ledger, self.clients = payments, ledger, clients
         self._today = today or (lambda: dt.datetime.now(dt.timezone(dt.timedelta(hours=8))).date())
 
     # -- helpers -------------------------------------------------------------------------------
@@ -564,10 +569,54 @@ class Pipeline:
             jpph_gate(c)
             phase_gate(c.first_schedule_item, c.execution_date, self._today(), self.rules, self.s.phase2_enabled)
             preflight_parties(c.parties, self.verifier)
+            data: dict[str, Any] = {"parties": [mask(p.tin) for p in c.parties]}
+            if self.s.require_registered_client or self.clients is not None:
+                data.update(self._client_check(ctx, c, ctx.calc.total_duty_rm))
         except GateFailure as exc:
             return self._halt(ctx, exc, "preflight")
         ctx.state = "PREFLIGHT_OK"
-        return self._ok(ctx, "PREFLIGHT_OK", {"parties": [mask(p.tin) for p in c.parties]})
+        return self._ok(ctx, "PREFLIGHT_OK", data)
+
+    def _client_check(self, ctx: TxnContext, c: Classification, duty: Decimal) -> dict[str, Any]:
+        """Step 0 of the process: the document must belong to a registered, approved TMF client.
+
+        When registration is not required (a pilot), a match is still recorded but nothing is blocked.
+        """
+        try:
+            m = client_gate(self.clients, c.parties, self._today(), duty)
+        except GateFailure as exc:
+            if self.s.require_registered_client:
+                raise
+            return {"client": None, "client_note": exc.code}
+        ctx.client_id, ctx.client_name, ctx.client_owner = m.primary_id, m.primary_name, m.default_contract_owner
+        if m.limit_exceeded_for:
+            ctx.needs_second_approval = True  # the client's own approval limit forces a checker
+        return {"client": m.primary_name, "client_limit_exceeded": m.limit_exceeded_for, "client_notes": m.notes}
+
+    def release_client_holds(self, actor: str) -> list[str]:
+        """Re-open documents held only because a client was missing, unapproved or suspended.
+
+        Each candidate is re-checked with the same gate; only documents that now pass are moved back to
+        CALCULATED, where the orchestrator re-runs every preflight gate. Nothing is approved here.
+        """
+        released: list[str] = []
+        for txn_id in self.store.list_ids():
+            ctx = self.store.load(txn_id)
+            if ctx is None or ctx.state != "REVIEW" or ctx.review is None or ctx.review.code not in CLIENT_HOLD_CODES:
+                continue
+            c = ctx.classification
+            if c is None or ctx.calc is None:
+                continue
+            try:
+                client_gate(self.clients, c.parties, self._today(), ctx.calc.total_duty_rm)
+            except GateFailure:
+                continue
+            ctx.state, ctx.review, ctx.last_halt = "CALCULATED", None, None
+            self.store.save(ctx)
+            self.audit.append(txn_id, "CLIENT_RELEASED", {"by": actor[:80]})
+            self._log(ctx, "client", "RELEASED", actor=actor[:80])
+            released.append(txn_id)
+        return released
 
     # -- node 6/7: draft + parity gate ----------------------------------------------------------
     async def draft(self, txn_id: str) -> StageResult:

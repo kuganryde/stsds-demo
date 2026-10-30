@@ -159,10 +159,11 @@
 
   // ---- dashboard, register ------------------------------------------------------------------
   function showTab(name) {
-    for (const t of ["work", "dashboard", "register"]) $("tab-" + t).hidden = t !== name;
+    for (const t of ["work", "dashboard", "clients", "register"]) $("tab-" + t).hidden = t !== name;
     for (const b of document.querySelectorAll(".tab")) b.setAttribute("aria-pressed", String(b.dataset.tab === name));
     if (!token) return;
     if (name === "dashboard") loadDashboard().catch((e) => say(e.message, true));
+    if (name === "clients") loadClients().catch((e) => say(e.message, true));
     if (name === "register") loadRegister().catch((e) => say(e.message, true));
   }
 
@@ -239,6 +240,147 @@
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
+
+  // ---- clients (step 0) -------------------------------------------------------------------
+  let editingId = null;
+  const CF = ["c-name", "c-id", "c-tin", "c-rm", "c-owner", "c-auth", "c-until", "c-limit", "c-addr", "c-contact", "c-crole", "c-sign"];
+
+  function btn(label, fn, aria, secondary) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = label;
+    if (secondary) b.className = "secondary";
+    if (aria) b.setAttribute("aria-label", aria);
+    b.addEventListener("click", fn);
+    return b;
+  }
+
+  function resetClientForm() {
+    editingId = null;
+    for (const id of CF) $(id).value = "";
+    $("c-type").value = "SDN_BHD";
+    $("c-idtype").value = "BRN";
+    $("cf-title").textContent = "Register a client";
+    $("c-save").textContent = "Save as draft";
+    $("c-cancel").hidden = true;
+  }
+
+  function prefill(p) {
+    resetClientForm();
+    $("c-name").value = p.name || "";
+    $("c-id").value = p.id_number || "";
+    $("c-tin").value = p.tin || "";
+    if (p.id_type) $("c-idtype").value = p.id_type;
+    $("c-rm").focus();
+  }
+
+  function parseSignatories(text) {
+    return text.split(";").map((s) => s.trim()).filter(Boolean).map((s) => {
+      const i = s.indexOf(",");
+      return i < 0 ? { name: s } : { name: s.slice(0, i).trim(), designation: s.slice(i + 1).trim() || null };
+    });
+  }
+
+  function clientBody() {
+    const v = (id) => $(id).value.trim() || null;
+    const body = { legal_name: v("c-name"), entity_type: $("c-type").value, id_type: $("c-idtype").value, id_number: v("c-id"),
+      tin: v("c-tin"), relationship_manager: v("c-rm"), default_contract_owner: v("c-owner"), authority_ref: v("c-auth"),
+      authority_valid_until: v("c-until"), approval_limit_rm: v("c-limit"), registered_address: v("c-addr"),
+      contact_name: v("c-contact"), contact_role: v("c-crole"), signatories: parseSignatories($("c-sign").value) };
+    const required = ["legal_name", "id_number", "tin", "relationship_manager"];
+    for (const k of Object.keys(body)) if (body[k] === null && (!editingId || required.includes(k))) delete body[k];
+    return body;
+  }
+
+  async function saveClient() {
+    try {
+      const r = await (await api(editingId ? "/v1/clients/" + editingId : "/v1/clients", {
+        method: editingId ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(clientBody()) })).json();
+      say(editingId ? (r.reapproval ? "Saved. A second person must approve the change before documents are stamped." : "Saved.")
+        : "Saved as a draft. A second person must approve it.", false);
+      resetClientForm();
+      await loadClients();
+    } catch (e) { say("Could not save: " + e.message, true); }
+  }
+
+  function editClient(c) {
+    const d = c.data;
+    resetClientForm();
+    editingId = c.id;
+    const set = (id, val) => { $(id).value = val == null ? "" : String(val); };
+    set("c-name", d.legal_name); set("c-id", d.id_number); set("c-tin", d.tin); set("c-rm", d.relationship_manager);
+    set("c-owner", d.default_contract_owner); set("c-auth", d.authority_ref); set("c-until", d.authority_valid_until);
+    set("c-limit", d.approval_limit_rm); set("c-addr", d.registered_address); set("c-contact", d.contact_name);
+    set("c-crole", d.contact_role);
+    set("c-sign", (d.signatories || []).map((s) => s.name + (s.designation ? ", " + s.designation : "")).join("; "));
+    $("c-type").value = d.entity_type;
+    $("c-idtype").value = d.id_type;
+    $("cf-title").textContent = "Edit client";
+    $("c-save").textContent = "Save changes";
+    $("c-cancel").hidden = false;
+    $("c-name").focus();
+  }
+
+  async function approveClient(c) {
+    try {
+      const r = await (await api("/v1/clients/" + c.id + "/activate", { method: "POST" })).json();
+      say("Approved." + (r.released.length ? " " + r.released.length + " held document(s) released." : ""), false);
+      await loadClients();
+    } catch (e) { say("Could not approve: " + e.message, true); }
+  }
+
+  async function suspendClient(c) {
+    try {
+      await api("/v1/clients/" + c.id + "/suspend", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: "Suspended from the console by an approver" }) });
+      say("Suspended. Its documents will be held.", false);
+      await loadClients();
+    } catch (e) { say("Could not suspend: " + e.message, true); }
+  }
+
+  async function loadClients() {
+    const pend = await (await api("/v1/clients/pending")).json();
+    const pb = $("pending");
+    pb.replaceChildren();
+    if (!pend.items.length) {
+      const tr = document.createElement("tr");
+      cell(tr, "No documents are waiting for a client.").colSpan = 5;
+      pb.appendChild(tr);
+    }
+    for (const p of pend.items) {
+      const tr = document.createElement("tr");
+      cell(tr, p.name); cell(tr, p.id_type + " " + p.id_number); cell(tr, p.tin || "–"); cell(tr, p.documents);
+      const td = document.createElement("td");
+      td.appendChild(btn("Register", () => prefill(p), "Register " + p.name));
+      tr.appendChild(td);
+      pb.appendChild(tr);
+    }
+    const q = new URLSearchParams();
+    if ($("cl-q").value.trim()) q.set("q", $("cl-q").value.trim());
+    if ($("cl-status").value) q.set("status", $("cl-status").value);
+    const data = await (await api("/v1/clients?" + q.toString())).json();
+    const body = $("clients");
+    body.replaceChildren();
+    if (!data.items.length) {
+      const tr = document.createElement("tr");
+      cell(tr, "No clients yet.").colSpan = 8;
+      body.appendChild(tr);
+    }
+    for (const c of data.items) {
+      const d = c.data, tr = document.createElement("tr");
+      cell(tr, d.legal_name); cell(tr, d.id_type + " " + d.id_number); cell(tr, d.tin); cell(tr, d.relationship_manager);
+      cell(tr, (d.authority_ref || "none") + (d.authority_valid_until ? " to " + d.authority_valid_until : ""));
+      cell(tr, d.approval_limit_rm || "–");
+      cell(tr, c.status + (c.status === "DRAFT" ? " (prepared by " + c.prepared_by + ")" : ""), c.status === "ACTIVE" ? "good" : "bad");
+      const td = document.createElement("td");
+      td.appendChild(btn("Edit", () => editClient(c), "Edit " + d.legal_name, true));
+      if (c.status !== "ACTIVE") td.appendChild(btn(c.status === "SUSPENDED" ? "Reactivate" : "Approve", () => approveClient(c), "Approve " + d.legal_name));
+      else td.appendChild(btn("Suspend", () => suspendClient(c), "Suspend " + d.legal_name, true));
+      tr.appendChild(td);
+      body.appendChild(tr);
+    }
+  }
+
   async function addContract() {
     const v = (id) => $(id).value.trim() || null;
     const body = { name: v("a-name"), entity: v("a-entity"), doc_kind: $("a-kind").value, execution_date: v("a-exec"),
@@ -280,6 +422,9 @@
     try { csvDownload("stsds-register.csv", await (await api("/v1/register.csv")).blob()); }
     catch (e) { say("Export needs the checker role: " + e.message, true); }
   });
+  $("cl-go").addEventListener("click", () => loadClients().catch((e) => say(e.message, true)));
+  $("c-save").addEventListener("click", saveClient);
+  $("c-cancel").addEventListener("click", resetClientForm);
   $("a-add").addEventListener("click", addContract);
   $("a-import").addEventListener("click", importCsv);
 

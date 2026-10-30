@@ -34,6 +34,7 @@ from urllib.parse import urlsplit
 
 from .audit import MemoryAuditStore, verify_chain
 from .batch import BatchService
+from .clients import ClientDirectory
 from .gates import GateFailure
 from .ledger import Ledger
 from .notify import NullNotifier
@@ -55,6 +56,11 @@ MONTHS = ["january", "february", "march", "april", "may", "june", "july", "augus
 DEMO_PARTIES = [
     Party(role="party A", name="Demo Alpha Sdn Bhd", tin="C1234567890", id_type="BRN", id_number="202001012345"),
     Party(role="party B", name="Demo Beta Sdn Bhd", tin="C9876543210", id_type="BRN", id_number="201901054321"),
+]
+# A second pair of parties, used by the "newclient" sample: neither is registered in the demo client master.
+NEW_CLIENT_PARTIES = [
+    Party(role="party A", name="Demo Omega Sdn Bhd", tin="C5555555555", id_type="BRN", id_number="202201098765"),
+    Party(role="party B", name="Demo Delta Sdn Bhd", tin="C7777777777", id_type="BRN", id_number="201801077777"),
 ]
 
 
@@ -81,6 +87,9 @@ def _sample_core(kind: str, signed_on: dt.date) -> str:
     if kind == "lease":
         return (f"TENANCY AGREEMENT\nThis agreement is made on {when} between Demo Alpha Sdn Bhd (Landlord) and "
                 "Demo Beta Sdn Bhd (Tenant).\nThe Tenant shall pay monthly rent of RM1,500.00 for a term of 12 months.")
+    if kind == "newclient":  # a tenancy for a company that has not been onboarded yet
+        return (f"TENANCY AGREEMENT\nThis agreement is made on {when} between Demo Omega Sdn Bhd (Landlord) and "
+                "Demo Delta Sdn Bhd (Tenant).\nThe Tenant shall pay monthly rent of RM1,200.00 for a term of 12 months.")
     if kind == "blurry":  # same content, but flagged as a poor scan so the demo classifier is unsure
         return (f"TENANCY AGREEMENT (poor scan, illegible stamp)\nThis agreement is made on {when} between Demo Alpha "
                 "Sdn Bhd (Landlord) and Demo Beta Sdn Bhd (Tenant).\nThe Tenant shall pay monthly rent of RM2,000.00 "
@@ -280,7 +289,8 @@ class HeuristicClassifier:
         return Classification.model_validate({
             "bnds_module": module, "first_schedule_item": item, "requires_jpph_valuation": False,
             "is_foreign_buyer_or_entity": False, "financials": {k: v for k, v in fin.items() if v is not None},
-            "parties": [p.model_dump() for p in DEMO_PARTIES], "execution_date": date,
+            "parties": [p.model_dump() for p in (NEW_CLIENT_PARTIES if "demo omega" in low else DEMO_PARTIES)],
+            "execution_date": date,
             "document_kind": kind, "contract_owner": owner.group(1).strip() if owner else None,
             "confidence": 0.72 if "illegible" in low else 0.99,
         })
@@ -512,6 +522,7 @@ def build_demo(
     portal, notifier = SimulatedPortal(skew), NullNotifier()
     payments = SimulatedPayments(portal) if with_payments else None
     pipeline = Pipeline(
+        clients=ClientDirectory(workdir / "clients.sqlite3"),
         settings=settings, rules=rules, rules_sha256=sha, extractor=PdfTextExtractor(),
         classifier=classifier or HeuristicClassifier(), verifier=FormatOnlyVerifier(), rpa=portal,
         vault=Vault(LocalFolderS3(workdir / "demo-vault-NOT-WORM"), "demo", None, workdir / "sijil-cache"),

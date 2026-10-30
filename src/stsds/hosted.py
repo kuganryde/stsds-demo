@@ -24,6 +24,7 @@ from fastapi import HTTPException
 from fastapi.responses import RedirectResponse
 
 from .api import create_app
+from .clients import ClientDirectory, ClientIn
 from .demo import Kit, make_pdf, sample_text
 from .register import ManualIn, Register
 from .users import UserDirectory, hash_token
@@ -55,13 +56,35 @@ def _seed_register(register: Register) -> None:
             stamped_on=stamped), "demo seed")
 
 
+def _seed_clients(directory: ClientDirectory, today: dt.date) -> None:
+    """Two onboarded demo clients. Demo Omega is deliberately NOT onboarded: its sample document is held
+    until a visitor registers it and a second person approves it. All names and IDs are fictional."""
+    rows = [
+        ("Demo Alpha Sdn Bhd", "202001012345", "C1234567890", "Aisha Rahman", "Engagement letter DEMO-EL-001",
+         "Demo Alpha Finance", "Finance Controller"),
+        ("Demo Beta Sdn Bhd", "201901054321", "C9876543210", "Daniel Lim", "Engagement letter DEMO-EL-002",
+         "Demo Beta Admin", "Company Secretary"),
+    ]
+    for name, brn, tin, rm, auth, owner, role in rows:
+        cid = directory.create(ClientIn(
+            legal_name=name, entity_type="SDN_BHD", id_type="BRN", id_number=brn, tin=tin,
+            registered_address="Level 1, Jalan Demo, 50000 Kuala Lumpur (fictional)",
+            contact_name=owner, contact_role=role, relationship_manager=rm, default_contract_owner=owner,
+            authority_ref=auth, authority_valid_until=today + dt.timedelta(days=365), approval_limit_rm=Decimal("5000"),
+            signatories=[{"name": "Authorised Signatory", "designation": "Director"}],
+        ), "Demo Onboarding")
+        directory.activate(cid, "Demo Onboarding Approver", today)
+
+
 def build() -> Any:
     work = Path(os.environ.get("DEMO_WORKDIR") or tempfile.mkdtemp(prefix="stsds-hosted-"))
     work.mkdir(parents=True, exist_ok=True)
     ops_token = secrets.token_hex(32)  # in-process only; never returned by any route
     reviewer = os.environ.get("DEMO_REVIEWER_TOKEN") or secrets.token_hex(20)
     checker = os.environ.get("DEMO_CHECKER_TOKEN") or secrets.token_hex(20)
-    kit = Kit(work, engine_token=ops_token, webhook_secret=secrets.token_hex(32))
+    kit = Kit(work, engine_token=ops_token, webhook_secret=secrets.token_hex(32), require_registered_client=True)
+    assert kit.pipeline.clients is not None
+    _seed_clients(kit.pipeline.clients, dt.date.today())
     users = UserDirectory([
         {"name": "Demo Reviewer", "roles": ["reviewer"], "token_sha256": hash_token(reviewer)},
         {"name": "Demo Checker", "roles": ["checker"], "token_sha256": hash_token(checker)},
@@ -101,6 +124,7 @@ def build() -> Any:
             ("loan-5m.pdf", make_pdf(sample_text("loan", signed))),
             ("lease-poor-scan.pdf", make_pdf(sample_text("blurry", signed))),
             ("lease-1500-x12-again.pdf", lease),
+            ("lease-new-client-omega.pdf", make_pdf(sample_text("newclient", signed))),
             ("corrupt.pdf", b"this is not a pdf"),
         ]
         payload = {"source": "hosted-demo", "documents": [

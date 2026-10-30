@@ -51,6 +51,7 @@ class Settings:
     qr_verify_hosts: str = ""  # comma list of hosts the certificate QR may point to
     signing_url: str | None = None
     signing_token: str | None = None
+    require_registered_client: bool = False  # True = documents for unregistered clients are held
 
     @classmethod
     def from_env(cls, env: dict[str, str] | None = None) -> Settings:
@@ -89,6 +90,7 @@ class Settings:
             payment_url=e.get("PAYMENT_URL"),
             payment_token=_secret(e, "PAYMENT_TOKEN") or None,
             min_signatures=int(e.get("STSDS_MIN_SIGNATURES", "0")),
+            require_registered_client=e.get("STSDS_REQUIRE_CLIENT", "false").lower() == "true",
             qr_verify_hosts=e.get("STSDS_QR_VERIFY_HOSTS", ""),
             signing_url=e.get("SIGNING_URL"),
             signing_token=_secret(e, "SIGNING_TOKEN") or None,

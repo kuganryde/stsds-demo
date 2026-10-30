@@ -26,6 +26,7 @@ from pydantic import BaseModel, ValidationError
 from . import __version__, engine
 from .audit import verify_chain
 from .batch import BatchService
+from .clients import ClientDirectory, ClientIn, ClientPatch, SuspendIn, pending_from_holds
 from .gates import GateFailure
 from .ledger import Ledger, csv_safe
 from .orchestrator import Orchestrator
@@ -520,6 +521,96 @@ def create_app(
         shaped: dict[str, Any] = json.loads(
             json.dumps(rep, default=lambda o: o.model_dump(mode="json") if hasattr(o, "model_dump") else str(o)))
         return shaped
+
+    # ---- client master (step 0: register the client before any document is stamped) --------------
+    if pipeline.clients is None:
+        pipeline.clients = ClientDirectory(Path(settings.staging_dir) / "clients.sqlite3")
+    cdir: ClientDirectory = pipeline.clients
+    cl_read = principal("operator", "reviewer", "checker")
+    cl_write = principal("operator", "reviewer", "checker")  # preparing a record; approval is separate
+    cl_approve = principal("checker")  # always a named person, never the shared service token
+
+    def client_json(c: Any) -> dict[str, Any]:
+        out: dict[str, Any] = c.model_dump(mode="json")
+        return out
+
+    def cid_ok(cid: str) -> str:
+        if len(cid) != 32 or any(ch not in "0123456789abcdef" for ch in cid):
+            raise HTTPException(400, "invalid client id")
+        return cid
+
+    @app.get("/v1/clients")
+    def clients_list(
+        status: str | None = Query(default=None, pattern="^(DRAFT|ACTIVE|SUSPENDED|draft|active|suspended)$"),
+        q: str | None = Query(default=None, max_length=100), _who: Identity = Depends(cl_read),
+    ) -> dict[str, Any]:
+        rows = cdir.find(status, q)
+        return {"items": [client_json(c) for c in rows[:1000]], "total": len(rows)}
+
+    @app.get("/v1/clients/pending")
+    def clients_pending(_who: Identity = Depends(cl_read)) -> dict[str, Any]:
+        ctxs = [c for c in (pipeline.store.load(i) for i in pipeline.store.list_ids()) if c is not None]
+        return {"items": pending_from_holds(ctxs)}
+
+    @app.post("/v1/clients")
+    def clients_create(body: ClientIn, who: Identity = Depends(cl_write)) -> dict[str, str]:
+        try:
+            cid = cdir.create(body, who.name)
+        except ValueError as exc:
+            if str(exc) == "duplicate":
+                raise HTTPException(409, "a client with this ID number is already registered") from exc
+            raise HTTPException(422, "could not register the client") from exc
+        return {"id": cid, "status": "DRAFT"}
+
+    @app.get("/v1/clients/{cid}")
+    def clients_get(cid: str, _who: Identity = Depends(cl_read)) -> dict[str, Any]:
+        c = cdir.get(cid_ok(cid))
+        if c is None:
+            raise HTTPException(404, "client not found")
+        return client_json(c)
+
+    @app.patch("/v1/clients/{cid}")
+    def clients_edit(cid: str, body: ClientPatch, who: Identity = Depends(cl_write)) -> dict[str, Any]:
+        try:
+            res = cdir.update(cid_ok(cid), body, who.name)
+        except ValueError as exc:
+            if str(exc) == "duplicate":
+                raise HTTPException(409, "another client already has this ID number") from exc
+            raise HTTPException(422, "invalid client data") from exc
+        if res is None:
+            raise HTTPException(404, "client not found")
+        return res
+
+    @app.post("/v1/clients/{cid}/activate")
+    async def clients_activate(
+        cid: str, background: BackgroundTasks, who: Identity = Depends(cl_approve)
+    ) -> dict[str, Any]:
+        try:
+            cdir.activate(cid_ok(cid), who.name, pipeline._today())
+        except KeyError as exc:
+            raise HTTPException(404, "client not found") from exc
+        except PermissionError as exc:
+            raise HTTPException(403, str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from exc
+        released = pipeline.release_client_holds(who.name)  # documents held for this client move on by themselves
+
+        async def _advance_all() -> None:
+            for t in released:
+                await orchestrator.advance(t)
+
+        background.add_task(_advance_all)
+        return {"status": "ACTIVE", "released": released}
+
+    @app.post("/v1/clients/{cid}/suspend")
+    def clients_suspend(cid: str, body: SuspendIn, who: Identity = Depends(cl_approve)) -> dict[str, bool]:
+        if not cdir.suspend(cid_ok(cid), body.reason, who.name):
+            raise HTTPException(404, "client not found or already suspended")
+        return {"ok": True}
+
+    @app.get("/v1/clients/{cid}/history")
+    def clients_history(cid: str, _who: Identity = Depends(cl_read)) -> dict[str, Any]:
+        return {"items": cdir.history(cid_ok(cid))}
 
     # ---- reviewer console (static, same-origin, no inline script) -------------------------------
     def console_file(name: str, media: str, csp: bool = False) -> Response:

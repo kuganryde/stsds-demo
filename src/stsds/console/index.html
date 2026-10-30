@@ -28,6 +28,7 @@
     <div class="tabs" role="group" aria-label="Sections">
       <button type="button" class="tab" data-tab="work" aria-pressed="true">Work queue</button>
       <button type="button" class="tab" data-tab="dashboard" aria-pressed="false">Dashboard</button>
+      <button type="button" class="tab" data-tab="clients" aria-pressed="false">Clients</button>
       <button type="button" class="tab" data-tab="register" aria-pressed="false">Contract register</button>
     </div>
 
@@ -103,6 +104,56 @@
         <div class="table-wrap"><table><caption class="sr">Compliance alerts, most urgent first</caption>
           <thead><tr><th scope="col">Level</th><th scope="col">Contract</th><th scope="col">Entity</th><th scope="col">Date</th><th scope="col">Detail</th></tr></thead>
           <tbody id="alerts"></tbody></table></div>
+      </section>
+    </div>
+
+    <div id="tab-clients" hidden>
+      <section class="card" aria-labelledby="pend-h">
+        <h2 id="pend-h">Waiting for a client</h2>
+        <p class="hint">Documents are held when none of their parties is an approved client. Choose a party to start the registration; the documents are released automatically once a second person approves it.</p>
+        <div class="table-wrap"><table><caption class="sr">Parties on held documents that are not registered clients</caption>
+          <thead><tr><th scope="col">Party</th><th scope="col">ID</th><th scope="col">TIN</th><th scope="col">Held documents</th><th scope="col"><span class="sr">Action</span></th></tr></thead>
+          <tbody id="pending"></tbody></table></div>
+      </section>
+      <section class="card" aria-labelledby="cl-h">
+        <h2 id="cl-h">Clients</h2>
+        <div class="row">
+          <label for="cl-q" class="sr">Search</label><input id="cl-q" type="text" placeholder="Search name, ID, relationship manager" maxlength="100">
+          <label for="cl-status" class="sr">Status</label>
+          <select id="cl-status"><option value="">All statuses</option><option>DRAFT</option><option>ACTIVE</option><option>SUSPENDED</option></select>
+          <button id="cl-go" type="button">Search</button>
+        </div>
+        <div class="table-wrap"><table><caption class="sr">Registered clients</caption>
+          <thead><tr><th scope="col">Client</th><th scope="col">ID</th><th scope="col">TIN</th><th scope="col">Relationship manager</th><th scope="col">Authority</th><th scope="col">Limit (RM)</th><th scope="col">Status</th><th scope="col"><span class="sr">Actions</span></th></tr></thead>
+          <tbody id="clients"></tbody></table></div>
+      </section>
+      <section class="card" aria-labelledby="cf-h">
+        <h2 id="cf-h"><span id="cf-title">Register a client</span></h2>
+        <p class="hint">Whoever prepares a client cannot approve it. Material changes to an approved client (name, ID, TIN, authority, limit) send it back for a second approval. Keep emails and phone numbers in your CRM; only names and roles are stored here.</p>
+        <div class="row">
+          <label for="c-name" class="sr">Legal name</label><input id="c-name" type="text" placeholder="Legal name" maxlength="200">
+          <label for="c-type" class="sr">Entity type</label>
+          <select id="c-type"><option>SDN_BHD</option><option>BHD</option><option>LLP</option><option>PARTNERSHIP</option><option>SOLE_PROPRIETOR</option><option>INDIVIDUAL</option><option>OTHER</option></select>
+          <label for="c-idtype" class="sr">ID type</label>
+          <select id="c-idtype"><option>BRN</option><option>NRIC</option><option>PASSPORT</option></select>
+          <label for="c-id" class="sr">ID number</label><input id="c-id" type="text" placeholder="BRN / NRIC" maxlength="30">
+          <label for="c-tin" class="sr">TIN</label><input id="c-tin" type="text" placeholder="TIN (e.g. C1234567890)" maxlength="20">
+        </div>
+        <div class="row" style="margin-top:8px">
+          <label for="c-rm" class="sr">Relationship manager</label><input id="c-rm" type="text" placeholder="TMF relationship manager" maxlength="120">
+          <label for="c-owner" class="sr">Default contract owner</label><input id="c-owner" type="text" placeholder="Default contract owner" maxlength="200">
+          <label for="c-auth" class="sr">Authority reference</label><input id="c-auth" type="text" placeholder="Engagement letter / PoA ref" maxlength="120">
+          <label for="c-until" class="sr">Authority valid until</label><input id="c-until" type="text" placeholder="Valid until (YYYY-MM-DD)" maxlength="10">
+          <label for="c-limit" class="sr">Approval limit</label><input id="c-limit" type="text" placeholder="Checker needed from RM" maxlength="16">
+        </div>
+        <div class="row" style="margin-top:8px">
+          <label for="c-addr" class="sr">Registered address</label><input id="c-addr" type="text" placeholder="Registered address" maxlength="400">
+          <label for="c-contact" class="sr">Contact name</label><input id="c-contact" type="text" placeholder="Contact name" maxlength="120">
+          <label for="c-crole" class="sr">Contact role</label><input id="c-crole" type="text" placeholder="Contact role" maxlength="80">
+          <label for="c-sign" class="sr">Signatories</label><input id="c-sign" type="text" placeholder="Signatories: Name, Designation; Name, Designation" maxlength="600">
+          <button id="c-save" type="button">Save as draft</button>
+          <button id="c-cancel" type="button" class="secondary" hidden>Cancel edit</button>
+        </div>
       </section>
     </div>
 
