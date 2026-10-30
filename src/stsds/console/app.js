@@ -11,6 +11,7 @@
   let queue = [];
   let page = "";
   let openBatchId = null;
+  let demo = null;          // set only when the host is the public simulated demo (GET /demo/info succeeds)
   const $ = (id) => document.getElementById(id);
   const hasRole = (...r) => !!me && r.some((x) => me.roles.includes(x));
 
@@ -73,6 +74,7 @@
 
   function actionCell(tr, ...buttons) {
     const td = document.createElement("td");
+    td.className = "act";
     for (const b of buttons) td.appendChild(b);
     tr.appendChild(td);
   }
@@ -425,9 +427,12 @@
   async function loadBatches() {
     const op = hasRole("operator");
     $("upload").disabled = !op;
+    $("demo-seed").hidden = !demo;
     $("upload-hint").textContent = op
       ? "Choose several PDFs. Documents for a company that is not an approved client are held until it is registered."
-      : "Submitting documents needs the operator service token. You are signed in as " + me.name + ", so you can follow batches but not create them.";
+      : demo
+        ? "Simulated demo: press Load sample documents to submit a mixed batch of seven contracts, including a duplicate, a poor scan, an unregistered client and a corrupt file."
+        : "Submitting documents needs the operator service token. You are signed in as " + me.name + ", so you can follow batches but not create them.";
     const data = await (await api("/v1/batches")).json();
     const body = $("batches");
     body.replaceChildren();
@@ -617,6 +622,10 @@
   }
 
   async function loadRegister() {
+    // The server limits writing and CSV export to operator and checker; hide what would only fail with 403.
+    const writer = hasRole("operator", "checker");
+    $("add-card").hidden = !writer;
+    $("reg-csv").hidden = !writer;
     const q = new URLSearchParams();
     if ($("reg-q").value.trim()) q.set("q", $("reg-q").value.trim());
     if ($("reg-status").value) q.set("status", $("reg-status").value);
@@ -757,7 +766,7 @@
     for (const p of pend.items) {
       const tr = document.createElement("tr");
       cell(tr, p.name); cell(tr, p.id_type + " " + p.id_number); cell(tr, p.tin || "–"); cell(tr, p.documents);
-      const td = document.createElement("td");
+      const td = document.createElement("td"); td.className = "act";
       td.appendChild(btn("Register", () => prefill(p), "Register " + p.name));
       tr.appendChild(td);
       pb.appendChild(tr);
@@ -779,7 +788,7 @@
       cell(tr, (d.authority_ref || "none") + (d.authority_valid_until ? " to " + d.authority_valid_until : ""));
       cell(tr, d.approval_limit_rm || "–");
       cell(tr, c.status + (c.status === "DRAFT" ? " (prepared by " + c.prepared_by + ")" : ""), c.status === "ACTIVE" ? "good" : "bad");
-      const td = document.createElement("td");
+      const td = document.createElement("td"); td.className = "act";
       td.appendChild(btn("Edit", () => editClient(c), "Edit " + d.legal_name, true));
       const second = c.status !== "ACTIVE"
         ? btn(c.status === "SUSPENDED" ? "Reactivate" : "Approve", () => approveClient(c), "Approve " + d.legal_name)
@@ -858,14 +867,47 @@
   $("approve-filing").addEventListener("click", approveFiling);
   $("viewpdf").addEventListener("click", viewPdf);
 
-  $("signin").addEventListener("click", async () => {
-    token = $("token").value.trim();
-    $("token").value = "";
+  async function signInWith(value) {
+    token = value;
     try {
       me = await (await api("/v1/me")).json();
       enterApp();
     } catch (e) { token = ""; me = null; say("Sign-in failed: " + e.message, true); }
-  });
+  }
+  $("signin").addEventListener("click", () => { const v = $("token").value.trim(); $("token").value = ""; signInWith(v); });
+
+  // Demo helpers. The demo tokens only unlock simulated data and are served by the demo host itself; a real
+  // deployment has no /demo/info, so none of this appears there.
+  async function loadDemo() {
+    try {
+      const res = await fetch("/demo/info", { cache: "no-store" });
+      if (!res.ok) return;
+      demo = await res.json();
+    } catch (e) { return; }
+    $("demo-notice").textContent = String(demo.notice || "");
+    $("demo-box").hidden = false;
+    $("demo-reviewer").addEventListener("click", () => signInWith(demo.reviewer_token));
+    $("demo-checker").addEventListener("click", () => signInWith(demo.checker_token));
+    $("demo-seed").addEventListener("click", seedDemo);
+  }
+  async function seedDemo() {
+    const b = $("demo-seed");
+    b.disabled = true;
+    try {
+      const res = await fetch("/demo/seed", { method: "POST", cache: "no-store" });
+      if (!res.ok) {
+        let d = "HTTP " + res.status;
+        try { const j = await res.json(); if (typeof j.detail === "string") d = j.detail; } catch (e) { /* no body */ }
+        throw new Error(d);
+      }
+      const out = await res.json();
+      say("Sample batch submitted. Open it to follow each document.", false);
+      await loadBatches();
+      if (out && out.batch_id) openBatch(out.batch_id).catch(() => {});
+    } catch (e) { say(e.message, true); }
+    finally { b.disabled = false; }
+  }
+  loadDemo();
   $("token").addEventListener("keydown", (e) => { if (e.key === "Enter") $("signin").click(); });
 
   // While a batch is open on screen and still processing, refresh it quietly.

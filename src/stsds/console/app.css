@@ -1,16 +1,20 @@
-/* STSDS console. Tokens follow the "STSDS Console UI/UX" canvas. No web fonts: the CSP allows only same-origin assets. */
-:root{--bg:#F3F4F1;--fg:#0F1E2E;--muted:#4B5A69;--card:#fff;--line:#D9DDD6;--soft:#E6E9E3;
+/* STSDS console. Tokens follow the "STSDS Console UI/UX" canvas. IBM Plex is self-hosted (OFL) so the CSP can stay same-origin only. */
+@font-face{font-family:"IBM Plex Sans";font-weight:400;font-style:normal;font-display:swap;src:url(/console/fonts/ibm-plex-sans-latin-400-normal.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Sans";font-weight:600;font-style:normal;font-display:swap;src:url(/console/fonts/ibm-plex-sans-latin-600-normal.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Sans";font-weight:700;font-style:normal;font-display:swap;src:url(/console/fonts/ibm-plex-sans-latin-700-normal.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Mono";font-weight:400;font-style:normal;font-display:swap;src:url(/console/fonts/ibm-plex-mono-latin-400-normal.woff2) format("woff2")}
+:root{--btn:#0F1E2E;--btn-fg:#fff;--mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;--bg:#F3F4F1;--fg:#0F1E2E;--muted:#4B5A69;--card:#fff;--line:#D9DDD6;--soft:#E6E9E3;
   --nav:#0F1E2E;--nav-fg:#E8EEF4;--nav-muted:#A9B9C9;--nav-active:#1F3A52;
   --accent:#0E6B60;--accent-fg:#fff;--focus:#1B6FD1;
   --amber:#F2B94B;--amber-bg:#FFEFC9;--amber-fg:#6B4300;--ok-bg:#E1F2EE;--ok-fg:#0A4F47;
   --bad-bg:#FBE0DA;--bad-fg:#7A2314;--info-bg:#E2EAF3;--info-fg:#1B3A57;--danger:#A4161A;--ok:#146C2E}
-@media (prefers-color-scheme:dark){:root{--bg:#0C131B;--fg:#E8ECF2;--muted:#A9B3C2;--card:#16202B;--line:#2C3644;--soft:#223040;
+@media (prefers-color-scheme:dark){:root{--btn:#E8ECF2;--btn-fg:#0C131B;--bg:#0C131B;--fg:#E8ECF2;--muted:#A9B3C2;--card:#16202B;--line:#2C3644;--soft:#223040;
   --nav:#08101A;--nav-active:#1F3A52;--accent:#3FB8A5;--accent-fg:#06121F;--focus:#6DB3FF;
   --amber-bg:#3A2D0E;--amber-fg:#F2D28B;--ok-bg:#12332E;--ok-fg:#7FD9C9;--bad-bg:#3D1C16;--bad-fg:#FFB4A4;
   --info-bg:#1B2D42;--info-fg:#B8D2F0;--danger:#FF8A8D;--ok:#6FD58D}}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 "IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
-h1{margin:4px 0 0;font-size:1.9rem;line-height:1.2}h2{font-size:1.15rem;margin:0 0 10px}h3{font-size:1rem;margin:12px 0 6px}
+h1{margin:4px 0 0;font-size:30px;font-weight:700;line-height:1.2}h2{font-size:1.15rem;margin:0 0 10px}h3{font-size:1rem;margin:12px 0 6px}
 .eyebrow{margin:0;font-size:.8rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--accent)}
 .sub,.hint{color:var(--muted);margin:4px 0 12px}
 .center{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px}
@@ -23,25 +27,27 @@ button.nav[hidden]{display:none}
 button.nav:hover{background:var(--nav-active)}button.nav[aria-current=page]{background:var(--nav-active);color:#fff;font-weight:600}
 .badge{background:var(--amber);color:#0F1E2E;font-size:.8rem;font-weight:700;padding:2px 8px;border-radius:99px}
 .grow{flex-grow:1}.who{padding:12px;border-top:1px solid #2A4157;font-size:.85rem;color:var(--nav-muted);line-height:1.5}.who b{color:#fff}
-main{flex:999 1 560px;min-width:0;padding:28px 40px;box-sizing:border-box;max-width:1280px}
+main{flex:999 1 560px;min-width:0;padding:32px 40px;box-sizing:border-box;max-width:1280px}
 .page-head{margin-bottom:16px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px;margin:16px 0}
 .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0}.row.spread{justify-content:space-between}.stack{display:flex;flex-direction:column;gap:8px}
-label{font-weight:600}.check{display:block;font-weight:500;margin:8px 0}
+label{font-weight:600;font-size:14px}.check{display:block;font-weight:500;margin:8px 0}
 input[type=password],input[type=text],select{min-height:44px;padding:8px 12px;border:1px solid #8A97A4;border-radius:8px;background:var(--card);color:var(--fg);font:inherit}
 input[type=password],input[type=text]{flex:1 1 220px;min-width:0}
-input[type=file]{flex:1 1 260px;min-height:44px}
-textarea,pre{width:100%;font:13px/1.45 ui-monospace,Menlo,Consolas,monospace;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:10px}
+input[type=file]{min-height:44px}
+textarea,pre{width:100%;font:13px/1.45 var(--mono);background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:10px}
 pre{max-height:420px;overflow:auto;white-space:pre-wrap;word-break:break-word;margin:0 0 8px}
 button{min-height:44px;padding:8px 16px;border-radius:10px;border:2px solid var(--fg);background:var(--card);color:var(--fg);font:inherit;font-weight:600;cursor:pointer}
-button.primary,button:not(.nav):not(.secondary):not(.danger):not(.link){background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+button:not(.nav):not(.primary):not(.secondary):not(.danger):not(.link){background:var(--btn);border-color:var(--btn);color:var(--btn-fg)}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
 button.secondary{background:transparent;color:var(--fg)}button.danger{background:transparent;color:var(--danger);border-color:var(--danger)}
 button.link{min-height:0;padding:0;border:0;background:none;color:var(--accent);text-decoration:underline}
 button:disabled{opacity:.5;cursor:not-allowed}
 :focus-visible{outline:3px solid var(--focus);outline-offset:2px}
 .table-wrap{overflow-x:auto}table{border-collapse:collapse;width:100%;min-width:640px;font-size:.95rem}
 th{color:var(--muted);font-size:.85rem}th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--soft);vertical-align:top}
-td button{min-height:36px;padding:4px 12px;margin-right:6px}
+td button{min-height:36px;padding:4px 12px}
+td.act{white-space:nowrap}td.act>*+*{margin-left:8px}
 .grid{display:grid;grid-template-columns:1fr;gap:16px}@media (min-width:1000px){.grid,.two{grid-template-columns:1fr 1fr}}
 .two{display:grid;grid-template-columns:1fr;gap:16px}
 fieldset{border:1px solid var(--line);border-radius:10px;margin:16px 0 0;padding:12px}
@@ -59,7 +65,7 @@ fieldset{border:1px solid var(--line);border-radius:10px;margin:16px 0 0;padding
 .steps{display:flex;flex-wrap:wrap;gap:12px;list-style:none;margin:0;padding:0}.steps li{display:flex;gap:10px;align-items:center}
 .steps b{display:inline-flex;width:32px;height:32px;border-radius:99px;background:var(--soft);align-items:center;justify-content:center}
 .timeline{list-style:none;margin:0;padding:0}.timeline li{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--soft)}
-.timeline .when{flex:none;width:150px;color:var(--muted);font-size:.85rem}.timeline .mono,.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.8rem;word-break:break-all}
+.timeline .when{flex:none;width:150px;color:var(--muted);font-size:.85rem}.timeline .mono,.mono{font-family:var(--mono);font-size:.8rem;word-break:break-all}
 .bar{display:inline-block;width:70px;height:8px;border-radius:99px;background:var(--soft);vertical-align:middle;margin-right:8px;overflow:hidden}.bar i{display:block;height:100%;background:var(--accent)}
 .check-row{display:flex;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--soft)}
 @media (max-width:820px){nav{flex-basis:100%;flex-direction:row;flex-wrap:wrap;padding:12px}.brand{padding:0 12px 0 0}.grow,.who{display:none}main{padding:20px 16px}button.nav{width:auto}}
@@ -69,3 +75,22 @@ fieldset{border:1px solid var(--line);border-radius:10px;margin:16px 0 0;padding
 [hidden]{display:none !important}
 .stack input[type=password],.stack input[type=text]{flex:none}
 td button{white-space:nowrap}
+
+/* Labelled form grid: label above control, equal heights, buttons sit on the control baseline. */
+.row:has(>.field){display:grid;grid-template-columns:repeat(12,minmax(0,1fr));align-items:end;gap:14px 16px;margin:14px 0}
+.row:has(>.field)>button{grid-column:span 3;justify-self:stretch}
+.field{display:flex;flex-direction:column;gap:6px;grid-column:span 3;min-width:0}
+.field.wide,.field.s6{grid-column:span 6}.field.s4{grid-column:span 4}.field.s9{grid-column:span 9}
+@media (max-width:1100px){.field,.field.wide,.field.s6{grid-column:span 6}.field.s4{grid-column:span 4}.field.s9{grid-column:span 9}.row:has(>.field)>button{grid-column:span 6}}
+@media (max-width:640px){.field,.field.wide,.field.s4,.field.s6,.field.s9,.row:has(>.field)>button{grid-column:1/-1}}
+input[type=file]{padding:6px;border:1px solid #8A97A4;border-radius:8px;background:var(--card);color:var(--fg);font:inherit}
+input[type=file]::file-selector-button{min-height:30px;margin-right:12px;padding:2px 14px;border:0;border-radius:6px;background:var(--btn);color:var(--btn-fg);font:inherit;font-weight:600;cursor:pointer}
+.field input,.field select{width:100%;flex:none}
+th,td{padding:12px 10px}
+.card h2{font-size:1.15rem;font-weight:600}
+.callout .row{margin-bottom:0}
+.narrow .callout{margin:16px 0 8px}
+.narrow .callout .row{flex-direction:column;align-items:stretch}
+.row:has(>.field)>button.s2{grid-column:span 2}
+@media (max-width:1100px){.row:has(>.field)>button.s2{grid-column:span 6}}
+.field.s5{grid-column:span 5}

@@ -166,3 +166,24 @@ def test_console_shell_has_every_page_and_no_inline_style_or_script(world):
     js = c.get("/console/app.js").text
     assert "/v1/me" in js and "/v1/transactions/" in js and "innerHTML" not in js and "setAttribute(\"style\"" not in js
     assert "href=\"https://" not in html and "fonts.googleapis" not in c.get("/console/app.css").text
+
+
+def test_console_fonts_are_self_hosted_and_allow_listed(world):
+    client = world[1]
+    """Fonts come from our own origin only: allow-listed names, same-origin CSP, no path traversal."""
+    r = client.get("/console/fonts/ibm-plex-sans-latin-400-normal.woff2")
+    assert r.status_code == 200 and r.headers["content-type"] == "font/woff2"
+    assert "immutable" in r.headers["cache-control"]
+    assert client.get("/console/fonts/passwd").status_code == 404
+    assert client.get("/console/fonts/..%2Fapp.js").status_code == 404
+    assert "font-src 'self'" in client.get("/console").headers["content-security-policy"]
+
+
+def test_console_has_demo_and_labelled_form_hooks(world):
+    client = world[1]
+    html = client.get("/console").text
+    for hook in ('id="demo-box"', 'id="demo-reviewer"', 'id="demo-checker"', 'id="demo-seed"', 'id="add-card"'):
+        assert hook in html
+    assert 'class="sr">Legal name' not in html and '<label for="c-name">Legal name</label>' in html
+    js = client.get("/console/app.js").text
+    assert "/demo/info" in js and "/demo/seed" in js and "innerHTML" not in js

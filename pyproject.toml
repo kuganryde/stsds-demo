@@ -38,7 +38,7 @@ dev = [
 where = ["src"]
 
 [tool.setuptools.package-data]
-stsds = ["py.typed", "console/*"]
+stsds = ["py.typed", "console/*", "console/fonts/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

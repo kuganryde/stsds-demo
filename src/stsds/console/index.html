@@ -20,6 +20,15 @@
         <button id="signin" type="button" class="primary">Sign in</button>
       </div>
       <p id="signin-status" class="status" role="status" aria-live="polite"></p>
+      <div id="demo-box" class="callout warn" hidden>
+        <h2>Simulated demo</h2>
+        <p id="demo-notice">Nothing is filed with MyTax or paid.</p>
+        <p class="hint">Try the two-person rule: prepare as one person, approve as the other.</p>
+        <div class="row">
+          <button id="demo-reviewer" type="button" class="primary">Sign in as Demo Reviewer</button>
+          <button id="demo-checker" type="button" class="secondary">Sign in as Demo Checker</button>
+        </div>
+      </div>
       <p class="hint">RYDETECH GLOBAL ENTERPRISE · human-in-the-loop for stamp duty filings</p>
     </section>
   </div>
@@ -56,9 +65,8 @@
       <section class="card" aria-labelledby="cl-h">
         <h2 id="cl-h">Clients</h2>
         <div class="row">
-          <label for="cl-q" class="sr">Search</label><input id="cl-q" type="text" placeholder="Search name, ID, relationship manager" maxlength="100">
-          <label for="cl-status" class="sr">Status</label>
-          <select id="cl-status"><option value="">All statuses</option><option>DRAFT</option><option>ACTIVE</option><option>SUSPENDED</option></select>
+          <div class="field s6"><label for="cl-q">Search</label><input id="cl-q" type="text" placeholder="Search name, ID, relationship manager" maxlength="100"></div>
+          <div class="field s3"><label for="cl-status">Status</label><select id="cl-status"><option value="">All statuses</option><option>DRAFT</option><option>ACTIVE</option><option>SUSPENDED</option></select></div>
           <button id="cl-go" type="button">Search</button>
         </div>
         <div class="table-wrap"><table><caption class="sr">Registered clients</caption>
@@ -69,26 +77,28 @@
         <h2 id="cf-h"><span id="cf-title">Register a client</span></h2>
         <p class="hint">Whoever prepares a client cannot approve it. Material changes to an approved client (name, ID, TIN, authority, limit) send it back for a second approval. Keep emails and phone numbers in your CRM; only names and roles are stored here.</p>
         <div class="row">
-          <label for="c-name" class="sr">Legal name</label><input id="c-name" type="text" placeholder="Legal name" maxlength="200">
-          <label for="c-type" class="sr">Entity type</label>
-          <select id="c-type"><option>SDN_BHD</option><option>BHD</option><option>LLP</option><option>PARTNERSHIP</option><option>SOLE_PROPRIETOR</option><option>INDIVIDUAL</option><option>OTHER</option></select>
-          <label for="c-idtype" class="sr">ID type</label>
-          <select id="c-idtype"><option>BRN</option><option>NRIC</option><option>PASSPORT</option></select>
-          <label for="c-id" class="sr">ID number</label><input id="c-id" type="text" placeholder="BRN / NRIC" maxlength="30">
-          <label for="c-tin" class="sr">TIN</label><input id="c-tin" type="text" placeholder="TIN (e.g. C1234567890)" maxlength="20">
+<div class="field s6"><label for="c-name">Legal name</label><input id="c-name" type="text" placeholder="Legal name" maxlength="200"></div>
+<div class="field s3"><label for="c-type">Entity type</label><select id="c-type"><option>SDN_BHD</option><option>BHD</option><option>LLP</option><option>PARTNERSHIP</option><option>SOLE_PROPRIETOR</option><option>INDIVIDUAL</option><option>OTHER</option></select></div>
+<div class="field s3"><label for="c-idtype">ID type</label><select id="c-idtype"><option>BRN</option><option>NRIC</option><option>PASSPORT</option></select></div>
         </div>
         <div class="row">
-          <label for="c-rm" class="sr">Relationship manager</label><input id="c-rm" type="text" placeholder="TMF relationship manager" maxlength="120">
-          <label for="c-owner" class="sr">Default contract owner</label><input id="c-owner" type="text" placeholder="Default contract owner" maxlength="200">
-          <label for="c-auth" class="sr">Authority reference</label><input id="c-auth" type="text" placeholder="Engagement letter / PoA ref" maxlength="120">
-          <label for="c-until" class="sr">Authority valid until</label><input id="c-until" type="text" placeholder="Valid until (YYYY-MM-DD)" maxlength="10">
-          <label for="c-limit" class="sr">Approval limit</label><input id="c-limit" type="text" placeholder="Approval limit RM (checker needed at or above)" maxlength="16">
+<div class="field s4"><label for="c-id">ID number</label><input id="c-id" type="text" placeholder="BRN / NRIC" maxlength="30"></div>
+<div class="field s4"><label for="c-tin">TIN</label><input id="c-tin" type="text" placeholder="TIN (e.g. C1234567890)" maxlength="20"></div>
+<div class="field s4"><label for="c-rm">Relationship manager</label><input id="c-rm" type="text" placeholder="TMF relationship manager" maxlength="120"></div>
         </div>
         <div class="row">
-          <label for="c-addr" class="sr">Registered address</label><input id="c-addr" type="text" placeholder="Registered address" maxlength="400">
-          <label for="c-contact" class="sr">Contact name</label><input id="c-contact" type="text" placeholder="Contact name" maxlength="120">
-          <label for="c-crole" class="sr">Contact role</label><input id="c-crole" type="text" placeholder="Contact role" maxlength="80">
-          <label for="c-sign" class="sr">Signatories</label><input id="c-sign" type="text" placeholder="Signatories: Name, Designation; Name, Designation" maxlength="600">
+<div class="field s3"><label for="c-owner">Default contract owner</label><input id="c-owner" type="text" placeholder="Default contract owner" maxlength="200"></div>
+<div class="field s3"><label for="c-auth">Authority reference</label><input id="c-auth" type="text" placeholder="Engagement letter / PoA ref" maxlength="120"></div>
+<div class="field s3"><label for="c-until">Authority valid until</label><input id="c-until" type="text" placeholder="Valid until (YYYY-MM-DD)" maxlength="10"></div>
+<div class="field s3"><label for="c-limit">Approval limit (RM)</label><input id="c-limit" type="text" placeholder="e.g. 10000" maxlength="16"></div>
+        </div>
+        <div class="row">
+<div class="field s6"><label for="c-addr">Registered address</label><input id="c-addr" type="text" placeholder="Registered address" maxlength="400"></div>
+<div class="field s3"><label for="c-contact">Contact name</label><input id="c-contact" type="text" placeholder="Contact name" maxlength="120"></div>
+<div class="field s3"><label for="c-crole">Contact role</label><input id="c-crole" type="text" placeholder="Contact role" maxlength="80"></div>
+        </div>
+        <div class="row">
+<div class="field s9"><label for="c-sign">Signatories</label><input id="c-sign" type="text" placeholder="Name, Designation; Name, Designation" maxlength="600"></div>
           <button id="c-save" type="button">Save as draft</button>
           <button id="c-cancel" type="button" class="secondary" hidden>Cancel edit</button>
         </div>
@@ -96,14 +106,15 @@
       </div>
 
       <div id="page-batches" class="page" hidden>
-        <header class="page-head"><p class="eyebrow">Steps 2 to 11</p><h1>Batches</h1><p class="sub">Each document is validated and scored on its own. High-confidence documents are processed automatically; the rest wait for a person.</p></header>
+        <header class="page-head"><p class="eyebrow">Steps 1 to 9</p><h1>Batches</h1><p class="sub">Each document is validated and scored on its own. High-confidence documents are processed automatically; the rest wait for a person.</p></header>
         <section class="card" aria-labelledby="batch-h" id="upload-card">
           <h2 id="batch-h">Submit documents</h2>
           <p class="hint" id="upload-hint">Choose several PDFs. Documents for a company that is not an approved client are held until it is registered.</p>
           <div class="row">
-            <label for="files">PDF files</label>
-            <input id="files" type="file" accept="application/pdf" multiple>
+            <div class="field wide"><label for="files">PDF files</label>
+            <input id="files" type="file" accept="application/pdf" multiple></div>
             <button id="upload" type="button" class="primary">Submit batch</button>
+            <button id="demo-seed" type="button" class="secondary" hidden>Load sample documents</button>
           </div>
         </section>
         <section class="card" aria-labelledby="batches-h">
@@ -125,8 +136,8 @@
         <header class="page-head"><p class="eyebrow">Step 1 of the process</p><h1>Signing</h1><p class="sub">Send a document for e-signature. When everyone has signed, the signed PDF comes back into the pipeline by itself.</p></header>
         <section class="card" aria-labelledby="sg-h">
           <h2 id="sg-h">Send for signature</h2>
-          <div class="row"><label for="sg-file">PDF</label><input id="sg-file" type="file" accept="application/pdf"></div>
-          <div class="row"><label for="sg-name" class="sr">Document name</label><input id="sg-name" type="text" placeholder="Document name" maxlength="120"></div>
+          <div class="row"><div class="field wide"><label for="sg-file">PDF</label><input id="sg-file" type="file" accept="application/pdf"></div></div>
+          <div class="row"><div class="field"><label for="sg-name">Document name</label><input id="sg-name" type="text" placeholder="Document name" maxlength="120"></div></div>
           <div id="sg-signers"></div>
           <div class="row"><button id="sg-add" type="button" class="secondary">Add a signer</button><button id="sg-send" type="button" class="primary">Send for signature</button></div>
           <p class="hint">Emails go to the signing service only. STSDS keeps signer names, never email addresses. Sending needs the operator service token.</p>
@@ -181,8 +192,7 @@
       <fieldset id="review-actions">
         <legend>Your decision</legend>
         <label class="check"><input id="attest" type="checkbox"> I checked every figure, date and party against the original document.</label>
-        <label for="note">Note (optional)</label>
-        <input id="note" type="text" maxlength="300">
+        <div class="field s6"><label for="note">Note (optional)</label><input id="note" type="text" maxlength="300"></div>
         <div class="row">
           <button id="approve" type="button">Approve and continue</button>
           <button id="reject" type="button" class="danger">Reject</button>
@@ -214,7 +224,7 @@
         <p class="hint">Live from the contract register. Penalty figures are estimates for planning only; nothing here files or pays.</p>
         <div id="tiles" class="tiles"></div>
         <div class="row"><button id="dash-refresh" type="button" class="secondary">Refresh</button>
-          <label for="rep-month" class="sr">Report month</label><input id="rep-month" type="text" placeholder="YYYY-MM" maxlength="7" size="9">
+          <div class="field"><label for="rep-month">Report month</label><input id="rep-month" type="text" placeholder="YYYY-MM" maxlength="7" size="9"></div>
           <button id="rep-run" type="button" class="secondary">Monthly review</button></div>
         <p id="rep-out" class="hint"></p>
       </section>
@@ -231,34 +241,32 @@
       <section class="card" aria-labelledby="reg-h">
         <h2 id="reg-h">Contract register</h2>
         <div class="row">
-          <label for="reg-q" class="sr">Search</label><input id="reg-q" type="text" placeholder="Search name, entity, owner" maxlength="100">
-          <label for="reg-status" class="sr">Status</label>
-          <select id="reg-status"><option value="">All statuses</option><option>STAMPED</option><option>IN_PROGRESS</option><option>UNSTAMPED</option><option>OVERDUE</option><option>NOT_REQUIRED</option></select>
-          <button id="reg-go" type="button">Search</button>
-          <button id="reg-csv" type="button" class="secondary">Export CSV</button>
+          <div class="field s4"><label for="reg-q">Search</label><input id="reg-q" type="text" placeholder="Search name, entity, owner" maxlength="100"></div>
+          <div class="field s3"><label for="reg-status">Status</label><select id="reg-status"><option value="">All statuses</option><option>STAMPED</option><option>IN_PROGRESS</option><option>UNSTAMPED</option><option>OVERDUE</option><option>NOT_REQUIRED</option></select></div>
+          <button id="reg-go" type="button" class="s2">Search</button>
+          <button id="reg-csv" type="button" class="secondary s2">Export CSV</button>
         </div>
         <div class="table-wrap"><table><caption class="sr">Contracts and their stamping status</caption>
           <thead><tr><th scope="col">Contract</th><th scope="col">Entity</th><th scope="col">Type</th><th scope="col">Owner</th><th scope="col">Executed</th><th scope="col">Duty (RM)</th><th scope="col">Status</th><th scope="col">Deadline</th><th scope="col">Expiry</th><th scope="col">Penalty est. (RM)</th></tr></thead>
           <tbody id="register"></tbody></table></div>
       </section>
-      <section class="card" aria-labelledby="add-h">
+      <section class="card" id="add-card" aria-labelledby="add-h">
         <h2 id="add-h">Add an existing contract</h2>
         <p class="hint">For contracts stamped or still to be stamped outside this app. Dates are YYYY-MM-DD.</p>
         <div class="row">
-          <label for="a-name" class="sr">Contract name</label><input id="a-name" type="text" placeholder="Contract name" maxlength="200">
-          <label for="a-entity" class="sr">Entity</label><input id="a-entity" type="text" placeholder="Entity" maxlength="200">
-          <label for="a-kind" class="sr">Type</label>
-          <select id="a-kind"><option>EMPLOYMENT</option><option>SERVICE</option><option>INTERCOMPANY</option><option>LOAN</option><option>SHAREHOLDER</option><option>SHARE_TRANSFER</option><option>TENANCY</option><option>SECURITY</option><option>COMMERCIAL</option><option>OTHER</option></select>
+          <div class="field s5"><label for="a-name">Contract name</label><input id="a-name" type="text" placeholder="Contract name" maxlength="200"></div>
+          <div class="field s4"><label for="a-entity">Entity</label><input id="a-entity" type="text" placeholder="Entity" maxlength="200"></div>
+          <div class="field s3"><label for="a-kind">Type</label><select id="a-kind"><option>EMPLOYMENT</option><option>SERVICE</option><option>INTERCOMPANY</option><option>LOAN</option><option>SHAREHOLDER</option><option>SHARE_TRANSFER</option><option>TENANCY</option><option>SECURITY</option><option>COMMERCIAL</option><option>OTHER</option></select></div>
         </div>
         <div class="row">
-          <label for="a-exec" class="sr">Execution date</label><input id="a-exec" type="text" placeholder="Executed (YYYY-MM-DD)" maxlength="10">
-          <label for="a-duty" class="sr">Duty paid</label><input id="a-duty" type="text" placeholder="Duty RM (if known)" maxlength="16">
-          <label for="a-owner" class="sr">Contract owner</label><input id="a-owner" type="text" placeholder="Contract owner" maxlength="200">
-          <label for="a-expiry" class="sr">Expiry date</label><input id="a-expiry" type="text" placeholder="Expiry (YYYY-MM-DD)" maxlength="10">
-          <label for="a-cert" class="sr">Certificate reference</label><input id="a-cert" type="text" placeholder="Certificate ref (if stamped)" maxlength="120">
+          <div class="field s3"><label for="a-exec">Execution date</label><input id="a-exec" type="text" placeholder="Executed (YYYY-MM-DD)" maxlength="10"></div>
+          <div class="field s3"><label for="a-duty">Duty paid</label><input id="a-duty" type="text" placeholder="Duty RM (if known)" maxlength="16"></div>
+          <div class="field s3"><label for="a-owner">Contract owner</label><input id="a-owner" type="text" placeholder="Contract owner" maxlength="200"></div>
+          <div class="field s3"><label for="a-expiry">Expiry date</label><input id="a-expiry" type="text" placeholder="Expiry (YYYY-MM-DD)" maxlength="10"></div>
+          <div class="field s6"><label for="a-cert">Certificate reference</label><input id="a-cert" type="text" placeholder="Certificate ref (if stamped)" maxlength="120"></div>
           <button id="a-add" type="button">Add to register</button>
         </div>
-        <div class="row"><label for="a-file">Or import a CSV</label><input id="a-file" type="file" accept=".csv,text/csv"><button id="a-import" type="button" class="secondary">Import</button></div>
+        <div class="row"><div class="field s9"><label for="a-file">Or import a CSV</label><input id="a-file" type="file" accept=".csv,text/csv"></div><button id="a-import" type="button" class="secondary">Import</button></div>
         <p class="hint">CSV columns: name, entity, doc_kind, execution_date, and optionally counterparty, duty_rm, contract_owner, certificate_ref, stamped_on, renewal_date, expiry_date, not_required, notes.</p>
       </section>
       </div>
@@ -266,7 +274,7 @@
       <div id="page-ledger" class="page" hidden>
         <header class="page-head"><p class="eyebrow">Audit</p><h1>Ledger and audit</h1><p class="sub">Every transaction event, in order, chained so that edits or deletions show up.</p></header>
         <section class="card"><div id="ledger-tiles" class="tiles"></div>
-          <div class="row"><label for="lg-q" class="sr">Search</label><input id="lg-q" type="text" placeholder="Search transaction, document or person" maxlength="100"><button id="lg-go" type="button" class="secondary">Search</button><button id="lg-csv" type="button" class="secondary">Export CSV (spreadsheet-safe)</button></div>
+          <div class="row"><div class="field wide"><label for="lg-q">Search</label><input id="lg-q" type="text" placeholder="Search transaction, document or person" maxlength="100"></div><button id="lg-go" type="button" class="secondary">Search</button><button id="lg-csv" type="button" class="secondary">Export CSV (spreadsheet-safe)</button></div>
           <div class="table-wrap"><table><caption class="sr">Ledger entries, newest first</caption>
             <thead><tr><th scope="col">Time</th><th scope="col">Document</th><th scope="col">Stage</th><th scope="col">Outcome</th><th scope="col">By</th><th scope="col">Entry hash</th></tr></thead>
             <tbody id="ledger"></tbody></table></div>

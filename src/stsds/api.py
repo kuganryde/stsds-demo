@@ -100,8 +100,11 @@ class AlertBody(BaseModel):
 
 
 CONSOLE_DIR = Path(__file__).parent / "console"
+CONSOLE_FONTS = frozenset({
+    "ibm-plex-sans-latin-400-normal.woff2", "ibm-plex-sans-latin-600-normal.woff2",
+    "ibm-plex-sans-latin-700-normal.woff2", "ibm-plex-mono-latin-400-normal.woff2"})
 CONSOLE_CSP = (
-    "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; "
+    "default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; connect-src 'self'; "
     "img-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
 )
 
@@ -672,6 +675,15 @@ def create_app(
     @app.get("/console/app.js")
     def console_js() -> Response:
         return console_file("app.js", "text/javascript; charset=utf-8")
+
+    @app.get("/console/fonts/{name}")
+    def console_font(name: str) -> Response:
+        # Allow-list, not a path join: only the bundled Plex files can ever be served from here.
+        if name not in CONSOLE_FONTS:
+            raise HTTPException(404, "not found")
+        resp = console_file("fonts/" + name, "font/woff2")
+        resp.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        return resp
 
     @app.get("/console/app.css")
     def console_css() -> Response:
